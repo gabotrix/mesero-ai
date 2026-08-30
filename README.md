@@ -80,19 +80,26 @@ git clone https://github.com/gabotrix/mesero-ai.git && cd mesero-ai
 cd backend && npm install && node src/index.js
 ```
 
-Open `http://localhost:8787/?dock=mesa-01` and you have the table screen,
-running on the carta committed in `backend/menu.json`. No account, no keys, no
-configuration — enough to hear the whole thing work before you decide anything.
+Open `http://localhost:8787/?dock=mesa-01` and the table screen is there, on the
+carta committed in `backend/menu.json`, with the kitchen board and the POS
+alongside it. No account and no configuration.
 
-To serve your own restaurant, create one in the console and set **one variable**:
+**The voice needs a venue key.** That part is a hosted service, and the key is
+what identifies a restaurant to it. Create one in the console — free, self-serve
+— and set one variable:
 
 ```bash
 VENUE_KEY=msr_live_…
 ```
 
-Its carta, its tables and its agent arrive with it, and the backend caches them
-to disk so a restaurant whose internet drops at seven in the evening still
-serves dinner. That is the whole configuration — there is nothing else to set.
+That is the whole configuration. No project ids, no API keys, nothing else: the
+venue key is the only credential this backend ever carries, and its carta, its
+tables and its agent arrive with it. The backend caches them to disk, so a
+restaurant whose internet drops at seven in the evening still serves dinner.
+
+Everything else in this repository runs without any of that — the wire protocol,
+the firmware, the order state, the screens, the case. Point the provider at your
+own service and the key stops mattering.
 
 No hardware yet? `device-client/` is a Python stand-in that speaks the same
 protocol using your laptop's microphone.

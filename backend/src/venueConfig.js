@@ -19,16 +19,16 @@ import { config } from './config.js';
  */
 
 /**
- * Resolved by a database function rather than an edge function.
+ * Resolved by an edge function, not by the database directly.
  *
- * Both need to read past row-level security, and both can: an edge function with
- * the service role, a `security definer` function with the owner's rights. The
- * difference is that the second one is part of the schema — it deploys with the
- * migration, so there is no second artefact that can be forgotten, and nobody
- * has to be granted deploy access to ship a fix.
+ * Both read past row-level security. The difference is the credential: calling a
+ * database function through PostgREST requires the project's anon key, and that
+ * key cannot live in an open repository — on this project it also opens the
+ * payment and messaging functions. An edge function needs no such key, so a
+ * venue key is the only thing a restaurant ever configures.
  */
-function rpcUrl(name) {
-  return `https://${config.supabase.projectRef}.supabase.co/rest/v1/rpc/${name}`;
+function fnUrl(name) {
+  return `https://${config.supabase.projectRef}.supabase.co/functions/v1/${name}`;
 }
 
 /**
@@ -43,14 +43,10 @@ export async function loadVenueConfig(pack) {
   let data;
   try {
     // A restaurant opening its doors cannot wait on a hung socket.
-    const res = await fetch(rpcUrl('resolve_venue'), {
+    const res = await fetch(fnUrl('venue-config'), {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        apikey: config.supabase.anonKey,
-        authorization: `Bearer ${config.supabase.anonKey}`,
-      },
-      body: JSON.stringify({ p_key: config.venueKey }),
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ venueKey: config.venueKey }),
       signal: AbortSignal.timeout(8000),
     });
     data = await res.json().catch(() => ({}));
