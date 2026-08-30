@@ -1,0 +1,134 @@
+/* Mesero AI — shared design tokens.
+ *
+ * One palette for both screens. The table screen and the POS used to carry
+ * their own colours, which is how they drifted apart; anything either of them
+ * paints now comes from here.
+ *
+ * Navy over white, from ui-ux-pro-max's hospitality palette ("Luxury navy +
+ * gold service"): #1E3A8A on #F8FAFC with a service gold. Gold is kept for
+ * work in progress and green for done, because a kitchen board needs three
+ * states that are told apart at a glance — and never by colour alone.
+ *
+ * Every foreground/background pair below clears WCAG AA (4.5:1); the tightest
+ * is gold on white at 4.96:1.
+ */
+
+:root {
+  /* Surfaces */
+  --canvas: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #edf2f9;
+
+  /* Brand */
+  --brand: #1e3a8a;
+  --brand-deep: #16295f;
+  --brand-soft: #e7eefb;
+  --brand-ink: #0d1b3c;      /* the dark card the assistant lives on */
+  --on-brand: #ffffff;
+
+  /* Text */
+  --ink: #0f172a;
+  --ink-2: #334155;
+  --muted: #475569;          /* 7.4:1 on white */
+
+  /* Lines */
+  --line: #e2e8f0;
+  --line-soft: #eef2f7;
+  --line-brand: #cfdcf5;
+
+  /* Status. Paired with a word everywhere they are used. */
+  --ok: #0f7a5f;
+  --ok-soft: #e3f4ee;
+  /* The palette's gold is #a16207, but on its own soft tint that lands at
+     4.36:1 — under the 4.5:1 floor for the small caps used on status chips.
+     Two steps darker clears it at 5.5:1 and still reads as gold. */
+  --warn: #8a5406;
+  --warn-soft: #fbf0dc;
+  --err: #b42318;
+  --err-soft: #fde7e4;
+
+  /* On the dark assistant card */
+  --on-dark: #f2f6ff;
+  --on-dark-2: rgba(242, 246, 255, 0.62);
+  --on-dark-3: rgba(242, 246, 255, 0.14);
+  --on-dark-line: rgba(242, 246, 255, 0.12);
+  --seat-fill: #cfe0fa;
+  --seat-ink: #16295f;
+  --pulse: rgba(147, 180, 255, 0.46);
+  --pulse-strong: #93b4ff;   /* the seat that currently has the floor */
+  --kicker: #9db6e8;
+  --ok-dot: #6ee7b7;         /* the live dot, on navy rather than on white */
+  --gold-dark: #e0b15f;      /* gold that still reads on navy */
+
+  /* Depth. Cool, because the surfaces are cool. */
+  --shadow-sm: 0 2px 10px rgba(15, 34, 74, 0.06);
+  --shadow: 0 18px 50px rgba(15, 34, 74, 0.09);
+  --shadow-lg: 0 30px 100px rgba(9, 20, 46, 0.28);
+
+  /* Frosted glass, borrowed from the gabotrix-orb-dialogue project and
+     recoloured to this palette — the effect is the tint, the blur and the
+     hairline, none of which carry a hue of their own. Two variants, because a
+     panel floating on the white canvas and one floating on the navy assistant
+     card need opposite tints. */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(30, 58, 138, 0.14);
+  --glass-shadow: rgba(15, 34, 74, 0.10);
+  --glass-dark-bg: rgba(242, 246, 255, 0.09);
+  --glass-dark-border: rgba(242, 246, 255, 0.16);
+
+  --serif: "DM Serif Display", Georgia, serif;
+  --sans: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------------------------------------------------------------- glass */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px var(--glass-shadow);
+}
+.glass-strong {
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 16px 48px var(--glass-shadow);
+}
+/* On the navy card the tint has to go the other way. */
+.glass-dark {
+  background: var(--glass-dark-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--glass-dark-border);
+}
+
+/* ------------------------------------------------------------ entrances */
+
+.fade-in-up { animation: fade-in-up 600ms var(--ease-out) both; }
+.scale-in { animation: scale-in 520ms var(--ease) both; }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------- scrollbar */
+
+* { scrollbar-width: thin; scrollbar-color: var(--line-brand) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-brand); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brand); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-up, .scale-in { animation: none; }
+}

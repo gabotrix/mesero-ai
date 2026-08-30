@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ce1230" />
+  <meta name="description" content="Mesero de inteligencia artificial. Habla con la mesa y tu pedido aparece aquí." />
+  <title>Mesero AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="state-listening view-welcome">
+
+  <header class="topbar">
+    <div class="topbar-glass" aria-hidden="true"></div>
+    <div class="topbar-sheen" aria-hidden="true"></div>
+    <div class="topbar-row">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">🍽️</span>
+        <span class="brand-text">
+          <strong id="place">Fogón de la Abuela</strong>
+          <small>Mesa <b id="dockLabel">01</b></small>
+        </span>
+      </div>
+
+      <div class="topbar-right">
+        <!-- Compact agent, shown on a phone once a flow is open. -->
+        <div class="orb-compact" id="orbCompact">
+          <video id="avatarMini" class="avatar-mini" src="/assets/avatar.mp4" poster="/assets/avatar-poster.jpg"
+                 loop muted playsinline preload="auto" aria-hidden="true"></video>
+          <i class="dot"></i>
+        </div>
+        <span class="status-chip" id="statusChip"><i></i><span id="connectionLabel">Asistente activo</span></span>
+        <button class="icon-button" id="btnPower" title="Encender o apagar el mesero" aria-label="Encender o apagar el mesero">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+            <path d="M12 3v9" /><path d="M6.3 6.3a8 8 0 1 0 11.4 0" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <!-- Left rail on a desktop, the whole screen when nothing is open. -->
+    <aside class="agent-rail" id="agentRail">
+      <div class="welcome" id="welcome">
+        <h1>¡Bienvenido!</h1>
+        <p>Habla con nuestro mesero. No tienes que tocar nada.</p>
+      </div>
+
+      <div class="orb-wrap">
+        <div class="orb-glow" aria-hidden="true"></div>
+        <div class="orb glass-strong pulse-glow">
+          <video id="avatar" class="avatar" src="/assets/avatar.mp4" poster="/assets/avatar-poster.jpg"
+                 loop muted playsinline preload="auto" aria-hidden="true"></video>
+        </div>
+        <div class="seat-ring" id="seatRing" aria-hidden="true"></div>
+      </div>
+
+      <div class="state-pill glass" id="statePill"><i></i><span id="stateLine">Te estoy escuchando</span></div>
+      <p class="state-hint" id="assistantHint">Cuéntame qué quieres ordenar o pregúntame por la carta.</p>
+
+      <div class="suggestions" id="suggestions">
+        <button class="suggestion" data-say="¿Qué me recomiendas hoy?">¿Qué me recomiendas?</button>
+        <button class="suggestion" data-say="Muéstrame la carta, por favor.">Ver la carta</button>
+      </div>
+    </aside>
+
+    <!-- One view at a time, exactly like the reference. -->
+    <section class="view-area" id="viewArea">
+      <div class="view-head">
+        <button class="back-button" id="btnBack" hidden>← Volver</button>
+        <nav class="steps" id="steps" aria-label="Etapas del pedido"></nav>
+      </div>
+
+      <div class="view" id="viewMenu" hidden>
+        <div class="view-title"><span class="kicker">Explora</span><h2>Nuestra carta</h2></div>
+        <div class="chips" id="categoryList" aria-label="Categorías"></div>
+        <div class="menu-list" id="menuList"></div>
+      </div>
+
+      <div class="view" id="viewOrder" hidden>
+        <div class="view-title"><span class="kicker">En tiempo real</span><h2>Tu pedido</h2></div>
+        <div class="order-list" id="orderCard"></div>
+        <div class="order-total">
+          <div><span>Total</span><small>IVA incluido</small></div>
+          <strong id="orderTotal">$ 0</strong>
+        </div>
+      </div>
+
+      <div class="view" id="viewPayment" hidden>
+        <div class="view-title"><span class="kicker">Último paso</span><h2>Pagar la cuenta</h2></div>
+        <div class="pay-summary">
+          <span>Total de la mesa</span>
+          <strong id="payTotal">$ 0</strong>
+        </div>
+        <label class="field">
+          <span>¿A qué número te enviamos el comprobante?</span>
+          <input id="phoneInput" type="tel" inputmode="numeric" autocomplete="tel"
+                 placeholder="300 123 4567" maxlength="14" />
+          <small id="phoneHint">Usaremos este número también para enviarte la factura por WhatsApp.</small>
+        </label>
+        <button class="cta" id="btnPayNow" disabled>Generar enlace de pago</button>
+        <div class="pay-link-box" id="payLinkBox" hidden>
+          <p class="pay-note" id="payNote">Generando el enlace…</p>
+          <a class="cta" id="payLink" target="_blank" rel="noopener" hidden>Ir a pagar</a>
+          <p class="pay-sandbox" id="paySandbox" hidden>Modo de pruebas · no se cobra dinero real</p>
+        </div>
+      </div>
+
+      <div class="view" id="viewSummary" hidden>
+        <div class="summary-card">
+          <div class="success-mark">✓</div>
+          <h2 id="summaryTitle">¡Gracias por visitarnos!</h2>
+          <p id="summaryText">Tu pago fue recibido.</p>
+          <div class="receipt" id="receipt"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-actions" aria-label="Acciones">
+    <button class="service-button" id="btnWaiter">Pedir mesero</button>
+    <button class="service-button" id="btnMenu">La carta</button>
+    <button class="service-button primary" id="btnBill">La cuenta</button>
+  </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastText"></span></div>
+  <script src="/app.js"></script>
+</body>
+</html>

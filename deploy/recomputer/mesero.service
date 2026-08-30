@@ -1,0 +1,36 @@
+[Unit]
+Description=Mesero AI — session bridge for the tables
+Documentation=https://github.com/gabotrix/mesero-ai
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@APP_USER@
+WorkingDirectory=/opt/mesero-ai/backend
+# The editable files — menu, .env, web assets — live outside the install
+# directory, so updating the code never overwrites a carta somebody changed
+# mid-service.
+Environment=MESERO_ROOT=/var/lib/mesero-ai
+ExecStart=/usr/bin/node /opt/mesero-ai/backend/src/index.js
+
+# A restaurant is open for hours and nobody is watching a terminal. If it dies,
+# it comes back; if it dies repeatedly, it keeps trying rather than giving up
+# during service.
+Restart=always
+RestartSec=3
+StartLimitIntervalSec=0
+
+# It needs the network and its own data directory. Nothing else.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/mesero-ai
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mesero
+
+[Install]
+WantedBy=multi-user.target

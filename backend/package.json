@@ -1,0 +1,15 @@
+{
+  "name": "mesero-ai-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Session bridge: device audio <-> realtime voice agent <-> table screen",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": { "node": ">=20" }
+}

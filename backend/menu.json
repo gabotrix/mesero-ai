@@ -1,0 +1,86 @@
+{
+  "currency": "COP",
+  "restaurant": "Fogón de la Abuela",
+  "categories": [
+    {
+      "id": "platos-fuertes",
+      "label": "Platos fuertes",
+      "items": [
+        {
+          "sku": "bandeja-paisa",
+          "label": "Bandeja paisa",
+          "price": 32000,
+          "desc": "Frijoles, chicharrón, chorizo, arepa y huevo",
+          "tags": []
+        },
+        {
+          "sku": "ajiaco",
+          "label": "Ajiaco santafereño",
+          "price": 28000,
+          "desc": "Con alcaparras, crema y aguacate",
+          "tags": []
+        },
+        {
+          "sku": "mojarra-frita",
+          "label": "Mojarra frita",
+          "price": 34000,
+          "desc": "Con patacón y ensalada",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "id": "entradas",
+      "label": "Entradas",
+      "items": [
+        {
+          "sku": "empanadas",
+          "label": "Empanadas (3)",
+          "price": 9000,
+          "desc": "Con ají de la casa",
+          "tags": []
+        },
+        {
+          "sku": "patacones",
+          "label": "Patacones",
+          "price": 12000,
+          "desc": "Con hogao",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "id": "bebidas",
+      "label": "Bebidas",
+      "items": [
+        {
+          "sku": "limonada-coco",
+          "label": "Limonada de coco",
+          "price": 12000,
+          "desc": "",
+          "tags": []
+        },
+        {
+          "sku": "jugo-lulo",
+          "label": "Jugo de lulo",
+          "price": 8000,
+          "desc": "",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "id": "postres",
+      "label": "Postres",
+      "items": [
+        {
+          "sku": "tres-leches",
+          "label": "Tres leches",
+          "price": 11000,
+          "desc": "",
+          "tags": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# Desktop stand-in for the reSpeaker gadget.
+# Deliberately tiny: the point is that the protocol needs no heavy runtime.
+sounddevice>=0.4.6
+websockets>=12.0

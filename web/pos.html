@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#f4f7fb" />
+<title>Mesero AI — POS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/tokens.css" />
+  <link rel="stylesheet" href="/pos.css" />
+</head>
+<body>
+
+  <header class="top">
+    <div class="brand">
+      <span class="place" id="place">Mesero AI</span>
+      <span class="sub">Panel de administración</span>
+    </div>
+    <span class="meta" id="meta">—</span>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-view="mesas">Mesas<span class="badge" id="badgeMesas" hidden>0</span></button>
+    <button class="tab" data-view="cocina">Cocina<span class="badge" id="badgeCocina" hidden>0</span></button>
+    <button class="tab" data-view="carta">Carta</button>
+  </nav>
+
+  <main>
+    <section class="view active" id="view-mesas">
+      <div class="mesa-layout">
+        <div>
+          <div class="table-grid" id="tableGrid"></div>
+          <div class="empty" id="tablesEmpty">
+            No hay mesas conectadas todavía. Una mesa aparece aquí cuando su gadget
+            o su pantalla se conectan al backend.
+          </div>
+        </div>
+        <div class="card detail" id="tableDetail" hidden></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-cocina">
+      <div class="kanban" id="kanban"></div>
+    </section>
+
+    <section class="view" id="view-carta">
+      <div class="menu-head">
+        <div class="fields">
+          <label for="restName">Restaurante</label>
+          <input class="field" id="restName" placeholder="Nombre del restaurante" />
+        </div>
+        <div class="save">
+          <span class="dirty-note" id="dirtyNote" hidden>Cambios sin guardar</span>
+          <button class="btn primary" id="btnSaveMenu">Guardar carta</button>
+        </div>
+      </div>
+      <div id="menuEditor"></div>
+      <div class="menu-foot">
+        <button class="btn" id="btnAddCat">+ Nueva categoría</button>
+        <button class="btn ghost" id="btnReloadMenu">Descartar cambios</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/pos.js"></script>
+</body>
+</html>

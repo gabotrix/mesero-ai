@@ -1,0 +1,32 @@
+# One command on the droplet:
+#   docker compose --env-file .env up -d
+#
+# Caddy is here for one reason: it gets and renews the certificate on its own.
+# The gadget dials wss://, the diner's phone opens https://, and neither has to
+# be on the restaurant's network.
+services:
+  mesero:
+    build:
+      context: ../..
+      dockerfile: deploy/cloud/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "8787"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - mesero
+
+volumes:
+  caddy_data:
+  caddy_config:

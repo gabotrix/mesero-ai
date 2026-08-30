@@ -1,0 +1,18 @@
+{
+  "name": "mesero-ai-server-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Builds the Mesero AI backend into a single executable for a restaurant PC or a reComputer",
+  "type": "module",
+  "scripts": {
+    "bundle": "esbuild ../backend/src/index.js --bundle --platform=node --target=node20 --format=cjs --log-override:empty-import-meta=silent --outfile=build/mesero-server.cjs",
+    "build:win": "npm run bundle && pkg build/mesero-server.cjs --targets node20-win-x64 --output dist/win/mesero-server.exe",
+    "build:recomputer": "npm run bundle && pkg build/mesero-server.cjs --targets node20-linux-arm64 --output dist/recomputer/mesero-server",
+    "build": "npm run build:win && npm run build:recomputer"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.3.0",
+    "esbuild": "^0.25.12",
+    "postject": "^1.0.0-alpha.6"
+  }
+}

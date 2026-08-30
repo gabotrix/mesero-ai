@@ -1,0 +1,19 @@
+# Replace with the name you point at the droplet. Caddy obtains and renews the
+# certificate by itself; there is nothing else to configure.
+mesa.gabotrix.com {
+	# Both the gadget's WebSocket and the diner's page go to the same place —
+	# reverse_proxy upgrades connections without being told to.
+	reverse_proxy mesero:8787
+
+	encode gzip
+
+	header {
+		# The table screen is opened from an NFC tag by a stranger's phone. It
+		# has no login, by design, so it should at least not be embeddable or
+		# sniffable for its content type.
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		-Server
+	}
+}

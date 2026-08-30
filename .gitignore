@@ -1,0 +1,28 @@
+node_modules/
+.env
+*.log
+__pycache__/
+.venv/
+venv/
+.pio/
+.vscode/
+dist/
+agent-speech.wav
+*.wav
+.pio/
+
+# 3D print outputs — regenerate with openscad, do not version
+hardware/case/*.stl
+
+# Local editor and tooling config, not project source
+.claude/
+.vscode/
+
+# Slicer output and backups: regenerated per printer, not source
+hardware/case/*.gcode
+hardware/case/*.bak
+
+# Desktop build output: an 80 MB runtime plus a bundle, both regenerated
+desktop/build/
+desktop/dist/
+desktop/node_modules/
