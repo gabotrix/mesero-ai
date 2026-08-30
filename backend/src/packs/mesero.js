@@ -341,6 +341,10 @@ export const pack = {
           label: String(i.label),
           price: Math.round(Number(i.price)),
           desc: String(i.desc || ''),
+          // Kept through the rewrite. This mapping names every field it copies,
+          // so anything new is dropped in silence — which is how the photos
+          // reached the backend and never reached a table.
+          image: i.image ? String(i.image) : null,
           tags: Array.isArray(i.tags) ? i.tags.map(String) : [],
         })),
       })),

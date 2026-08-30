@@ -288,6 +288,11 @@ body:not(.view-welcome) .suggestions { display: none; }
 
 .dish { display: flex; align-items: flex-start; gap: 12px; padding: 13px 0; border-bottom: 1px solid hsl(var(--border)); }
 .dish:last-child { border-bottom: none; }
+.dish-photo {
+  width: 68px; height: 68px; flex: 0 0 auto;
+  object-fit: cover; border-radius: 12px;
+  background: hsl(var(--muted));
+}
 .dish .body { flex: 1; min-width: 0; }
 .dish .name { font-size: 15px; font-weight: 700; }
 .dish .desc { margin-top: 3px; font-size: 12px; color: hsl(var(--muted-foreground)); line-height: 1.45; }

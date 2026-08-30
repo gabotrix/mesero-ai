@@ -336,8 +336,13 @@ function renderMenu() {
 
   const picked = new Set((model.state?.items || []).map((it) => it.sku));
   const cat = menu.categories[model.activeCategory];
+  // The photo leads when there is one. A carta somebody reads with their eyes
+  // sells differently from a list of names, and the diner is looking at this
+  // while deciding — loading is lazy so a long carta does not fetch twenty
+  // images nobody scrolled to.
   ui.menuList.innerHTML = (cat.items || []).map((it) => `
     <div class="dish${picked.has(it.sku) ? ' picked' : ''}">
+      ${it.image ? `<img class="dish-photo" src="${esc(it.image)}" alt="" loading="lazy">` : ''}
       <div class="body">
         <div class="name">${esc(it.label)}</div>
         ${it.desc ? `<div class="desc">${esc(it.desc)}</div>` : ''}
