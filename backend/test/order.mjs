@@ -11,6 +11,36 @@ import { WebSocket } from 'ws';
 
 const BASE = 'ws://localhost:8787';
 const HTTP = 'http://localhost:8787';
+const HTTP_BASE = HTTP;
+
+/*
+ * This suite drives the agent, so it needs a model to answer.
+ *
+ * Everything else in this backend runs uncredentialed on purpose, and a clone
+ * that fails its own tests out of the box reads as broken software rather than
+ * as unconfigured software. So: check, say so plainly, and exit clean.
+ */
+const health = await fetch(`${HTTP_BASE}/api/health`)
+  .then((r) => r.json())
+  .catch(() => null);
+
+if (!health) {
+  console.log('OMITIDA — no hay backend escuchando. Arráncalo con: node src/index.js');
+  process.exit(0);
+}
+if (!health.voice?.ready) {
+  console.log(
+    `OMITIDA — esta prueba necesita una voz que responda.
+` +
+      `  proveedor: ${health.voice?.provider}
+` +
+      `  falta:     ${health.voice?.needs}
+` +
+      `Todo lo demás del repo funciona sin eso; solo estas pruebas hablan con el modelo.`,
+  );
+  process.exit(0);
+}
+
 const DOCK = 'mesa-order';
 const SAY = 'Buenas, quiero dos bandejas paisas y un jugo de lulo, por favor.';
 

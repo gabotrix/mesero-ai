@@ -96,7 +96,22 @@ const server = createServer(async (req, res) => {
   }
 
   if (pathname === '/api/health') {
-    return json(res, 200, { ok: true, pack: pack.id, sessions: sessions.list().length });
+    /*
+     * `voice.ready` says whether a model will actually answer.
+     *
+     * Everything else in this backend runs with no credential at all, which is
+     * deliberate — but two of the end-to-end tests drive the agent, and without
+     * a model they used to report a plain failure. A clone that greets somebody
+     * with a red FAIL on its own test suite has told them the project is
+     * broken when it is only unconfigured.
+     */
+    const voice =
+      config.provider === 'gabotrix'
+        ? { provider: 'gabotrix', ready: Boolean(config.venueKey), needs: 'VENUE_KEY' }
+        : config.provider === 'openai'
+          ? { provider: 'openai', ready: Boolean(config.openai?.apiKey), needs: 'OPENAI_API_KEY' }
+          : { provider: config.provider, ready: Boolean(config.localVoice?.url), needs: 'LOCAL_VOICE_URL' };
+    return json(res, 200, { ok: true, pack: pack.id, sessions: sessions.list().length, voice });
   }
 
   if (pathname === '/api/sessions') {

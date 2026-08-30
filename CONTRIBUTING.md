@@ -33,3 +33,34 @@ made it that way.
 
 Spanish for anything a diner or a restaurant reads. English for code,
 identifiers, commit messages and these docs.
+
+## Running the tests
+
+```bash
+cd backend && npm install
+npm test
+```
+
+Those are unit tests: no server, no network, no credential. They cover the
+part most likely to break quietly — turning arrival angles into customers —
+against a simulated array with jitter and reflections, seeded so a failure
+reproduces on someone else's machine.
+
+The end-to-end suites need a backend running:
+
+```bash
+node src/index.js          # in one terminal
+npm run test:e2e           # in another
+```
+
+- `tickets.mjs` — a ticket through the kitchen. Needs nothing else.
+- `order.mjs` — a spoken order, driven with text so it is deterministic.
+- `smoke.mjs` — a fake gadget and a fake screen against a live backend.
+
+The last two talk to the voice model, so they skip with a printed reason when
+no voice is configured rather than reporting a failure. A clone that fails its
+own tests out of the box reads as broken software rather than as unconfigured
+software.
+
+`record.mjs` is not a test — it captures what the gadget would hear to
+`agent-speech.wav`, for listening to when something sounds wrong.

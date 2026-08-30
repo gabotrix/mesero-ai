@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node --test \"test/*.test.mjs\""
+    "test": "node --test \"test/*.test.mjs\"",
+    "test:e2e": "node test/tickets.mjs && node test/order.mjs && node test/smoke.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"
