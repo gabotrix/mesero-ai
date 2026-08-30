@@ -493,6 +493,133 @@ static void saveConfig(const String &host, uint16_t port, const String &dock,
   prefs.end();
 }
 
+// ------------------------------------------------------- provisioning by wire
+//
+// The browser can configure this gadget over the same USB cable it was flashed
+// with, so nobody has to join a captive portal and type a forty-character venue
+// key on a phone keyboard. Chrome's Web Serial opens the port, sends one JSON
+// line, and we store it and reboot.
+//
+// The captive portal stays. Web Serial exists only in desktop Chrome and Edge —
+// no Safari, no Firefox, no mobile browser at all — so a restaurant with only a
+// phone still needs the portal. This is a second door, not a replacement.
+//
+// Replies are prefixed because this port is also the log stream, and the
+// browser has to pick its answers out of a running commentary about I2S frames.
+static const char *WIRE_TAG = "#MESERO ";
+static String wireLine;
+
+static void wireReply(const JsonDocument &doc) {
+  Serial.print(WIRE_TAG);
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+static void wireError(const char *why) {
+  StaticJsonDocument<128> out;
+  out["ok"] = false;
+  out["error"] = why;
+  wireReply(out);
+}
+
+static void handleWireCommand(const String &line) {
+  StaticJsonDocument<512> in;
+  if (deserializeJson(in, line)) return;  // Not for us: almost certainly log noise.
+  const char *cmd = in["cmd"] | "";
+
+  if (!strcmp(cmd, "hello")) {
+    StaticJsonDocument<320> out;
+    out["ok"] = true;
+    out["device"] = "mesero-ai";
+    out["mac"] = WiFi.macAddress();
+    out["dock"] = cfgDock;
+    out["host"] = cfgHost;
+    out["port"] = cfgPort;
+    // Never the key itself, only whether there is one. A cable is not a reason
+    // to hand a credential back out.
+    out["hasVenueKey"] = cfgVenueKey.length() > 0;
+    wireReply(out);
+    return;
+  }
+
+  if (!strcmp(cmd, "scan")) {
+    // Synchronous on purpose: this only ever runs while a person is watching a
+    // browser, never while a table is being served.
+    int n = WiFi.scanNetworks();
+    StaticJsonDocument<1024> out;
+    out["ok"] = true;
+    JsonArray nets = out.createNestedArray("networks");
+    for (int i = 0; i < n && i < 20; i++) {
+      JsonObject net = nets.createNestedObject();
+      net["ssid"] = WiFi.SSID(i);
+      net["rssi"] = WiFi.RSSI(i);
+      net["open"] = WiFi.encryptionType(i) == WIFI_AUTH_OPEN;
+    }
+    wireReply(out);
+    WiFi.scanDelete();
+    return;
+  }
+
+  if (!strcmp(cmd, "config")) {
+    const char *ssid = in["ssid"] | "";
+    if (!*ssid) { wireError("ssid requerido"); return; }
+
+    String host = in["host"] | cfgHost;
+    uint16_t port = in["port"] | cfgPort;
+    String dock = in["dock"] | cfgDock;
+    String venue = in["venue"] | cfgVenueKey;
+    saveConfig(host, port, dock, venue);
+
+    // WiFi credentials go where the portal would have put them, so both doors
+    // lead to the same place and either can be used to correct the other.
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, in["pass"] | "");
+
+    StaticJsonDocument<192> out;
+    out["ok"] = true;
+    out["saved"] = true;
+    out["dock"] = dock;
+    wireReply(out);
+
+    // Report the outcome rather than declaring success: a wrong password is the
+    // most common thing to happen here, and the browser should be able to say so
+    // while the person is still standing at the table with the cable in hand.
+    unsigned long until = millis() + 15000;
+    while (millis() < until && WiFi.status() != WL_CONNECTED) delay(200);
+
+    StaticJsonDocument<192> res;
+    res["ok"] = WiFi.status() == WL_CONNECTED;
+    res["event"] = "wifi";
+    if (WiFi.status() == WL_CONNECTED) {
+      res["ip"] = WiFi.localIP().toString();
+    } else {
+      res["error"] = "no se pudo conectar a esa red";
+    }
+    wireReply(res);
+
+    if (WiFi.status() == WL_CONNECTED) {
+      delay(300);
+      ESP.restart();
+    }
+    return;
+  }
+}
+
+/** Non-blocking: reads whatever bytes arrived and acts only on a full line. */
+static void pollWire() {
+  while (Serial.available()) {
+    char c = (char)Serial.read();
+    if (c == '\r') continue;
+    if (c == '\n') {
+      if (wireLine.length()) handleWireCommand(wireLine);
+      wireLine = "";
+      continue;
+    }
+    // A runaway sender must not be able to grow this without bound.
+    if (wireLine.length() < 480) wireLine += c;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(400);
@@ -661,6 +788,7 @@ static void checkProvisioningReset() {
 
 void loop() {
   ws.loop();
+  pollWire();
   checkProvisioningReset();
   pollDoa();
   // One frame out for every frame in. Input and output share the I2S clock, so

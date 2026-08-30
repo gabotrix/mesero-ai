@@ -170,6 +170,24 @@ serves dinner.
 
 ## Step 7 — Point the gadget at it
 
+There are two doors. Take the first one if you have a laptop.
+
+### From the browser, over the USB cable
+
+Open the console on **Chrome or Edge on a computer** and use *Conectar gadget*.
+It flashes the firmware, asks the gadget which WiFi networks *it* can see from
+where it is standing, and writes the network, the table and the venue key down
+the same cable. Nothing is typed on a phone.
+
+This is also how somebody with no PlatformIO installed gets a working board:
+steps 4 and 7 collapse into one button, and the toolchain never enters the
+story.
+
+> Web Serial exists only in desktop Chrome and Edge. Not Safari, not Firefox,
+> and no mobile browser at all — which is exactly why the second door stays.
+
+### From a phone, over the gadget's own WiFi
+
 Power the gadget. It raises a WiFi network called **MeseroAI-setup**. Join it
 from a phone and the setup page opens by itself.
 

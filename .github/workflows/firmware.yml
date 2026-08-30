@@ -1,0 +1,97 @@
+# Builds the firmware and publishes something a browser can flash.
+#
+# The console offers "install from this page", and for that to be honest the
+# binary behind it has to be reproducible by anyone — not a file somebody built
+# on their laptop once and copied in. This workflow is what makes that claim
+# true, and what lets a contributor see their firmware change reach a real
+# board without owning the release process.
+#
+# esp-web-tools flashes a single image at offset 0, so the four pieces the ESP32
+# normally receives separately are merged here rather than in the browser.
+
+name: firmware
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "firmware/**"
+      - ".github/workflows/firmware.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Both caches matter: the ESP32 toolchain is ~1 GB and downloading it on
+      # every push turns a two-minute job into a twelve-minute one.
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Build
+        working-directory: firmware
+        run: pio run
+
+      - name: Merge into one flashable image
+        working-directory: firmware
+        run: |
+          BUILD=.pio/build/seeed_xiao_esp32s3
+          BOOT_APP0=$(find ~/.platformio -name boot_app0.bin | head -1)
+          test -n "$BOOT_APP0" || { echo "boot_app0.bin no encontrado"; exit 1; }
+          mkdir -p ../dist
+          python -m esptool --chip esp32s3 merge_bin -o ../dist/mesero-ai.bin \
+            --flash_mode dio --flash_freq 80m --flash_size 8MB \
+            0x0     $BUILD/bootloader.bin \
+            0x8000  $BUILD/partitions.bin \
+            0xe000  "$BOOT_APP0" \
+            0x10000 $BUILD/firmware.bin
+
+      - name: Write the manifest
+        run: |
+          cat > dist/manifest.json <<JSON
+          {
+            "name": "Mesero AI",
+            "version": "${GITHUB_SHA::7}",
+            "new_install_prompt_erase": true,
+            "builds": [
+              {
+                "chipFamily": "ESP32-S3",
+                "parts": [{ "path": "mesero-ai.bin", "offset": 0 }]
+              }
+            ]
+          }
+          JSON
+          ls -la dist
+
+      # Kept as an artifact on every push and attached to releases, so the
+      # console can point at a stable URL for a tagged version while a
+      # contributor can still grab the build from their own branch.
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mesero-ai-firmware
+          path: dist/
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/mesero-ai.bin
+            dist/manifest.json
