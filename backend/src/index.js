@@ -116,6 +116,41 @@ const server = createServer(async (req, res) => {
   // sessions pick the change up immediately; live ones keep the menu they
   // connected with until the table is next woken.
   // What a table screen needs to wear the restaurant's colours instead of ours.
+  /**
+   * Everything on the pass, across every table.
+   *
+   * A kitchen does not think per table — it thinks in what has been sent, what
+   * is on the stove and what is waiting to go out. So this flattens the tables
+   * into tickets with their dishes, which is the shape the board actually
+   * renders, rather than making it stitch that together from per-table calls.
+   */
+  if (pathname === '/api/kitchen') {
+    const tickets = [];
+    for (const s of sessions.list()) {
+      const st = s.state || {};
+      for (const t of st.tickets || []) {
+        if (t.status === 'served') continue;
+        tickets.push({
+          id: t.id,
+          n: t.n,
+          dock: s.dock,
+          status: t.status,
+          sentAt: t.sentAt,
+          items: (st.items || [])
+            .filter((it) => it.ticket === t.id)
+            .map((it) => ({
+              label: it.label || it.sku,
+              qty: it.qty || 1,
+              seat: it.seat || null,
+              note: it.note || null,
+            })),
+        });
+      }
+    }
+    tickets.sort((a, b) => (a.sentAt || 0) - (b.sentAt || 0));
+    return json(res, 200, { tickets, now: Date.now() });
+  }
+
   if (pathname === '/api/brand') {
     return json(res, 200, { brand: sessions.brand || null });
   }

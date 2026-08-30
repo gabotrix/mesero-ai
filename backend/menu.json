@@ -19,7 +19,7 @@
           "label": "Ajiaco santafereño",
           "price": 28000,
           "desc": "Con alcaparras, crema y aguacate",
-          "image": null,
+          "image": "https://ecxsbvmmpwpjjyrufykr.supabase.co/storage/v1/object/public/menu/25e0a4ce-02a1-447c-af49-cd2d53145f64/ajiaco-1788075077237.png",
           "tags": []
         },
         {

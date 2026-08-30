@@ -2,14 +2,349 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<!-- The kitchen view moved into the POS: same live data, plus the buttons to
-     move a ticket through preparing → ready → served. This URL stays because
-     it is printed on the README and possibly bookmarked in a kitchen tablet. -->
-<meta http-equiv="refresh" content="0; url=/pos.html#cocina" />
-<title>Mesero AI — Cocina</title>
-<script>location.replace('/pos.html#cocina');</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b6b52" />
+<title>Cocina · Mesero AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/*
+ * The pass.
+ *
+ * Three columns, left to right, in the order a dish moves: sent, on the stove,
+ * ready to go out. Nobody in a kitchen reads a list — they look up, see how many
+ * are waiting and how long the oldest has been waiting, and go back to what they
+ * were doing. So the timer is the loudest thing on a card after the dish itself,
+ * and it turns red at fifteen minutes.
+ *
+ * Built for a tablet clipped to a shelf: big touch targets, no hover states that
+ * matter, and readable from a step back with wet hands.
+ */
+:root{
+  --bg:#eef1f4;
+  --card:#fff;
+  --ink:#111a17;
+  --muted:#5f6b66;
+  --line:#dde3e0;
+
+  --sent:#d97706;      --sent-soft:#fffbeb;   --sent-line:#fde68a;
+  --cooking:#1d4ed8;   --cooking-soft:#eff6ff;--cooking-line:#bfdbfe;
+  --ready:#047857;     --ready-soft:#ecfdf5;  --ready-line:#a7f3d0;
+  --late:#dc2626;
+
+  --shadow:0 2px 12px rgba(17,26,23,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1211; --card:#151d1a; --ink:#e9f0ec; --muted:#93a29c; --line:#26312d;
+    --sent-soft:#231a08; --cooking-soft:#0e1730; --ready-soft:#08201a;
+    --sent-line:#4a3610; --cooking-line:#1e3163; --ready-line:#12402f;
+    --shadow:0 2px 14px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1211; --card:#151d1a; --ink:#e9f0ec; --muted:#93a29c; --line:#26312d;
+  --sent-soft:#231a08; --cooking-soft:#0e1730; --ready-soft:#08201a;
+  --sent-line:#4a3610; --cooking-line:#1e3163; --ready-line:#12402f;
+  --shadow:0 2px 14px rgba(0,0,0,.4);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif;
+  display:flex;flex-direction:column;overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.head{font-family:'Sora',ui-sans-serif,sans-serif;letter-spacing:-.02em}
+
+/* ── top bar ─────────────────────────────────────────────────────────── */
+header{
+  flex:0 0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:12px 18px;background:var(--card);border-bottom:1px solid var(--line);
+}
+header h1{margin:0;font-size:19px;font-weight:800}
+header .sub{margin:1px 0 0;font-size:12.5px;color:var(--muted)}
+.spacer{flex:1}
+.pill{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:8px 14px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--muted);
+  font:600 13px/1 'DM Sans',sans-serif;cursor:pointer;
+}
+.pill[aria-pressed="true"]{background:var(--ready);border-color:transparent;color:#fff}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ready)}
+.dot.off{background:#b9c2be}
+
+/* ── columns ─────────────────────────────────────────────────────────── */
+main{flex:1;display:grid;gap:1px;background:var(--line);min-height:0}
+@media (min-width:900px){main{grid-template-columns:repeat(3,1fr)}}
+.col{background:var(--bg);display:flex;flex-direction:column;min-height:0}
+.col-head{
+  flex:0 0 auto;display:flex;align-items:center;gap:10px;
+  padding:11px 16px;color:#fff;
+}
+.col-head b{font:800 14px/1 'Sora',sans-serif;letter-spacing:.01em}
+.col-head .count{
+  margin-left:auto;min-width:26px;height:26px;padding:0 8px;
+  display:grid;place-items:center;border-radius:999px;
+  background:rgba(255,255,255,.22);font:800 13px/1 'Sora',sans-serif;
+  font-variant-numeric:tabular-nums;
+}
+.col[data-k="kitchen"] .col-head{background:var(--sent)}
+.col[data-k="preparing"] .col-head{background:var(--cooking)}
+.col[data-k="ready"] .col-head{background:var(--ready)}
+
+.list{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.empty{
+  margin:auto;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.6;
+  padding:30px 10px;
+}
+
+/* ── ticket ──────────────────────────────────────────────────────────── */
+.tk{
+  border-radius:16px;overflow:hidden;border:1px solid var(--line);
+  box-shadow:var(--shadow);animation:rise .22s ease-out both;
+}
+.col[data-k="kitchen"] .tk{background:var(--sent-soft);border-color:var(--sent-line)}
+.col[data-k="preparing"] .tk{background:var(--cooking-soft);border-color:var(--cooking-line)}
+.col[data-k="ready"] .tk{background:var(--ready-soft);border-color:var(--ready-line)}
+
+.tk-head{display:flex;align-items:center;gap:8px;padding:8px 12px;color:#fff}
+.col[data-k="kitchen"] .tk-head{background:var(--sent)}
+.col[data-k="preparing"] .tk-head{background:var(--cooking)}
+.col[data-k="ready"] .tk-head{background:var(--ready)}
+.tk-table{
+  background:rgba(255,255,255,.22);padding:2px 9px;border-radius:999px;
+  font:600 11.5px/1.5 'DM Sans',sans-serif;white-space:nowrap;
+}
+.tk-n{font-size:10.5px;color:rgba(255,255,255,.72);white-space:nowrap}
+.tk-time{
+  margin-left:auto;display:flex;align-items:center;gap:5px;
+  font:800 13px/1 'Sora',sans-serif;font-variant-numeric:tabular-nums;
+  color:rgba(255,255,255,.94);
+}
+.tk-time.late{color:#ffe0e0;animation:beat 1.1s ease-in-out infinite}
+
+.tk-body{padding:11px 12px 12px}
+.dish{display:flex;align-items:baseline;gap:8px;padding:3px 0}
+.dish b{font:800 15px/1.25 'Sora',sans-serif;font-variant-numeric:tabular-nums}
+.dish span{font-size:14.5px;font-weight:600;min-width:0}
+.dish em{
+  font-style:normal;font-size:11.5px;font-weight:600;color:var(--muted);
+  margin-left:auto;white-space:nowrap;
+}
+.note{margin:5px 0 0;font-size:12.5px;color:var(--muted)}
+
+.go{
+  margin-top:10px;width:100%;min-height:44px;border:0;border-radius:12px;
+  color:#fff;font:700 13.5px/1 'DM Sans',sans-serif;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.col[data-k="kitchen"] .go{background:var(--sent)}
+.col[data-k="preparing"] .go{background:var(--cooking)}
+.col[data-k="ready"] .go{background:var(--ready)}
+.go:active{transform:translateY(1px)}
+.go:disabled{opacity:.5}
+.go svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+button:focus-visible,.pill:focus-visible{outline:3px solid var(--cooking);outline-offset:2px}
+</style>
 </head>
 <body>
-  <p>La vista de cocina ahora vive en el <a href="/pos.html#cocina">POS</a>.</p>
+
+<header>
+  <div>
+    <h1>Cocina</h1>
+    <p class="sub" id="sub">Conectando…</p>
+  </div>
+  <div class="spacer"></div>
+  <button class="pill" id="sound" aria-pressed="true" title="Aviso sonoro al llegar un pedido">
+    <span class="dot" id="sdot"></span><span id="slabel">Sonido</span>
+  </button>
+</header>
+
+<main>
+  <section class="col" data-k="kitchen">
+    <div class="col-head"><b>Enviados</b><span class="count" id="c-kitchen">0</span></div>
+    <div class="list" id="l-kitchen"></div>
+  </section>
+  <section class="col" data-k="preparing">
+    <div class="col-head"><b>En preparación</b><span class="count" id="c-preparing">0</span></div>
+    <div class="list" id="l-preparing"></div>
+  </section>
+  <section class="col" data-k="ready">
+    <div class="col-head"><b>Listos</b><span class="count" id="c-ready">0</span></div>
+    <div class="list" id="l-ready"></div>
+  </section>
+</main>
+
+<script>
+const COLUMNS = {
+  kitchen:   { next: 'preparing', cta: 'Empezar',      icon: 'M5 3l14 9-14 9V3z' },
+  preparing: { next: 'ready',     cta: 'Marcar listo', icon: 'M20 6L9 17l-5-5' },
+  ready:     { next: 'served',    cta: 'Entregado',    icon: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z' },
+};
+
+const el = (id) => document.getElementById(id);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+let sound = true;
+let known = new Set();
+let busy = new Set();
+
+/**
+ * Three tones, not one.
+ *
+ * A single beep in a kitchen is indistinguishable from a timer, an extractor
+ * fan or a phone. A short rising-falling-rising figure is recognisable across a
+ * room full of noise, which is the entire job.
+ */
+function chime() {
+  if (!sound) return;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    const tone = (freq, at, dur, gain) => {
+      const osc = ctx.createOscillator();
+      const vol = ctx.createGain();
+      osc.connect(vol); vol.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      vol.gain.setValueAtTime(0, ctx.currentTime + at);
+      vol.gain.linearRampToValueAtTime(gain, ctx.currentTime + at + 0.01);
+      vol.gain.linearRampToValueAtTime(0, ctx.currentTime + at + dur);
+      osc.start(ctx.currentTime + at);
+      osc.stop(ctx.currentTime + at + dur + 0.05);
+    };
+    tone(880, 0, 0.12, 0.4);
+    tone(660, 0.15, 0.12, 0.35);
+    tone(880, 0.30, 0.18, 0.45);
+    setTimeout(() => ctx.close(), 900);
+  } catch {
+    /* no audio on this device; the board still works */
+  }
+}
+
+el('sound').addEventListener('click', () => {
+  sound = !sound;
+  el('sound').setAttribute('aria-pressed', String(sound));
+  el('sdot').classList.toggle('off', !sound);
+  el('slabel').textContent = sound ? 'Sonido' : 'Silencio';
+  if (sound) chime();
+});
+
+const tableOf = (dock) => 'Mesa ' + (dock.match(/\d+/)?.[0] ?? dock);
+
+/** How long it has been waiting. Red past fifteen minutes, which is when a
+    diner starts looking around for somebody to ask. */
+function waited(sentAt, now) {
+  const s = Math.max(0, Math.floor((now - sentAt) / 1000));
+  const m = Math.floor(s / 60);
+  return { text: `${m}:${String(s % 60).padStart(2, '0')}`, late: m >= 15 };
+}
+
+function ticketCard(t, now) {
+  const c = COLUMNS[t.status];
+  const w = waited(t.sentAt, now);
+  const dishes = t.items.map((i) => `
+    <div class="dish">
+      <b>${i.qty}&times;</b>
+      <span>${esc(i.label)}</span>
+      ${i.seat ? `<em>${esc(i.seat)}</em>` : ''}
+    </div>
+    ${i.note ? `<p class="note">${esc(i.note)}</p>` : ''}`).join('');
+
+  return `
+    <article class="tk" data-id="${esc(t.id)}" data-dock="${esc(t.dock)}">
+      <div class="tk-head">
+        <span class="tk-table">${esc(tableOf(t.dock))}</span>
+        <span class="tk-n">#${t.n}</span>
+        <span class="tk-time${w.late ? ' late' : ''}">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4">
+            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+          </svg>${w.text}
+        </span>
+      </div>
+      <div class="tk-body">
+        ${dishes}
+        <button class="go" data-next="${c.next}" ${busy.has(t.id) ? 'disabled' : ''}>
+          <svg viewBox="0 0 24 24"><path d="${c.icon}"/></svg>${c.cta}
+        </button>
+      </div>
+    </article>`;
+}
+
+let last = { tickets: [], now: Date.now() };
+
+function render(data) {
+  last = data;
+  for (const key of Object.keys(COLUMNS)) {
+    const mine = data.tickets.filter((t) => t.status === key);
+    el('c-' + key).textContent = mine.length;
+    el('l-' + key).innerHTML = mine.length
+      ? mine.map((t) => ticketCard(t, data.now)).join('')
+      : `<p class="empty">Nada por aquí.<br>${
+          key === 'kitchen' ? 'Los pedidos nuevos aparecen aquí.'
+          : key === 'preparing' ? 'Nada en el fuego ahora mismo.'
+          : 'Nada esperando para salir.'}</p>`;
+  }
+}
+
+document.addEventListener('click', async (e) => {
+  const go = e.target.closest('.go');
+  if (!go) return;
+  const card = go.closest('.tk');
+  const id = card.dataset.id;
+  const dock = card.dataset.dock;
+  busy.add(id);
+  go.disabled = true;
+  try {
+    await fetch(`/api/dock/${encodeURIComponent(dock)}/ticket/${encodeURIComponent(id)}/status`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status: go.dataset.next }),
+    });
+    await poll();
+  } finally {
+    busy.delete(id);
+  }
+});
+
+async function poll() {
+  try {
+    const res = await fetch('/api/kitchen');
+    const data = await res.json();
+
+    // A chime only for tickets nobody has seen yet — not on every refresh, and
+    // not on the first load, which would greet an empty kitchen with a noise.
+    const ids = new Set(data.tickets.map((t) => t.id + '@' + t.dock));
+    if (known.size) {
+      for (const k of ids) if (!known.has(k)) { chime(); break; }
+    }
+    known = ids;
+
+    render(data);
+    const n = data.tickets.length;
+    el('sub').textContent = n
+      ? `${n} ${n === 1 ? 'pedido' : 'pedidos'} en marcha`
+      : 'Todo al día';
+  } catch {
+    el('sub').textContent = 'Sin conexión con el servidor. Reintentando…';
+  }
+}
+
+poll();
+setInterval(poll, 3000);
+// The clocks have to move even when nothing arrives.
+setInterval(() => render({ ...last, now: Date.now() }), 1000);
+</script>
 </body>
 </html>
