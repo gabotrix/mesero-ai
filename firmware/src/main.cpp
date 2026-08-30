@@ -510,6 +510,8 @@ static void saveConfig(const String &host, uint16_t port, const String &dock,
 // Replies are prefixed because this port is also the log stream, and the
 // browser has to pick its answers out of a running commentary about I2S frames.
 static const char *WIRE_TAG = "#MESERO ";
+/** Defined below, next to the code that opens the socket. */
+static bool wsStarted;
 static String wireLine;
 
 static void wireReply(const JsonDocument &doc) {
@@ -541,11 +543,29 @@ static void handleWireCommand(const String &line) {
     // Never the key itself, only whether there is one. A cable is not a reason
     // to hand a credential back out.
     out["hasVenueKey"] = cfgVenueKey.length() > 0;
+    // Enough to tell "cannot reach the network" from "the server refused me",
+    // which look identical from the console and have opposite fixes.
+    out["wifi"] = WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "";
+    out["ip"] = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "";
+    out["rssi"] = WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : 0;
+    out["socket"] = wsStarted;
     wireReply(out);
     return;
   }
 
   if (!strcmp(cmd, "scan")) {
+    /*
+     * Station mode has to be on to see anything.
+     *
+     * The captive portal leaves the radio in AP, and scanNetworks() in AP-only
+     * returns zero — so the browser got an empty list at exactly the moment
+     * somebody was standing there trying to pick a network. AP_STA keeps the
+     * portal alive for whoever might be using it while the scan runs.
+     */
+    if (WiFi.getMode() == WIFI_AP) WiFi.mode(WIFI_AP_STA);
+    else if (WiFi.getMode() == WIFI_OFF) WiFi.mode(WIFI_STA);
+    delay(100);
+
     // Synchronous on purpose: this only ever runs while a person is watching a
     // browser, never while a table is being served.
     int n = WiFi.scanNetworks();
@@ -756,7 +776,7 @@ void setup() {
  * Deferred out of setup() because setup() no longer waits for WiFi. The client
  * reconnects on its own after this, so this runs exactly once.
  */
-static bool wsStarted = false;
+// Declared near the wire protocol, which reports it in hello.
 
 static void startSocketWhenReady() {
   if (wsStarted || WiFi.status() != WL_CONNECTED) return;
