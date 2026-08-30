@@ -69,6 +69,7 @@ export async function loadVenueConfig(pack) {
     ok: true,
     source: 'platform',
     venue: data.venue,
+    brand: data.brand || null,
     agent: data.agent,
     docks: data.docks || [],
     menuApplied: Boolean(hasMenu),

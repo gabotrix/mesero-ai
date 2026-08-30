@@ -493,6 +493,95 @@ ui.btnPayNow.addEventListener('click', () => {
   setTimeout(() => { model.payPending = false; renderPayment(); }, 12000);
 });
 
+/**
+ * Wear the restaurant's colours, not ours.
+ *
+ * Applied by overwriting the two tokens the whole stylesheet is built on, so a
+ * restaurant changing its brand in the console changes this screen on the next
+ * load — no rebuild, no redeploy, nothing to reflash.
+ */
+async function applyBrand() {
+  try {
+    const res = await fetch('/api/brand');
+    const { brand } = await res.json();
+    if (!brand) return;
+
+    const root = document.documentElement.style;
+    const set = (k, v) => v && root.setProperty(k, v);
+
+    if (brand.primary) {
+      const p = hexToHsl(brand.primary);
+      if (p) {
+        // The whole stylesheet hangs off these. Setting only --primary left the
+        // header and the buttons in our red, because the gradients were written
+        // out by hand rather than derived — so derive the family here.
+        set('--primary', hsl(p));
+        set('--primary-light', hsl({ ...p, l: Math.min(p.l + 11, 92) }));
+        set('--primary-dark', hsl({ ...p, l: Math.max(p.l - 14, 8) }));
+        set('--foreground', hsl({ ...p, l: 20 }));
+        set('--gradient-primary',
+          `linear-gradient(135deg, hsl(${hsl({ ...p, l: Math.max(p.l - 14, 8) })}), hsl(${hsl(p)}))`);
+        set('--gradient-glow',
+          `radial-gradient(circle at 50% 50%, hsl(${hsl(p)} / 0.2), transparent 70%)`);
+        set('--glass-border', `${hsl(p)} / 0.2`);
+        set('--glass-shadow', `${hsl({ ...p, l: 20 })} / 0.1`);
+        for (const [name, blur, alpha] of [['sm', '2px 8px', 0.08], ['md', '8px 24px', 0.12], ['lg', '16px 48px', 0.16]]) {
+          set(`--shadow-${name}`, `0 ${blur} hsl(${hsl({ ...p, l: 20 })} / ${alpha})`);
+        }
+      }
+    }
+
+    if (brand.secondary) {
+      const c = hexToHsl(brand.secondary);
+      if (c) {
+        set('--secondary', hsl(c));
+        set('--accent', hsl(c));
+        set('--gradient-accent',
+          `linear-gradient(135deg, hsl(${hsl(c)}), hsl(${hsl({ ...c, l: Math.max(c.l - 10, 8) })}))`);
+        set('--shadow-accent', `0 10px 40px -10px hsl(${hsl(c)} / 0.4)`);
+      }
+    }
+
+    if (brand.logoUrl) {
+      const mark = document.querySelector('.brand-mark');
+      if (mark) {
+        mark.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = brand.logoUrl;
+        img.alt = '';
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+        mark.appendChild(img);
+      }
+    }
+    if (brand.name) document.title = `${brand.name} · Mesero AI`;
+  } catch {
+    /* the screen works in our colours; it is not worth failing over */
+  }
+}
+
+const hsl = (c) => `${c.h} ${c.s}% ${c.l}%`;
+
+/** The stylesheet is written in HSL components, so a hex has to be converted. */
+function hexToHsl(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return null;
+  const [r, g, b] = m.slice(1).map((v) => parseInt(v, 16) / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+applyBrand();
 setView('welcome', { silent: true });
 renderAll();
 connect();

@@ -115,6 +115,11 @@ const server = createServer(async (req, res) => {
   // validation, and menu.json stays the single source of truth. New agent
   // sessions pick the change up immediately; live ones keep the menu they
   // connected with until the table is next woken.
+  // What a table screen needs to wear the restaurant's colours instead of ours.
+  if (pathname === '/api/brand') {
+    return json(res, 200, { brand: sessions.brand || null });
+  }
+
   if (pathname === '/api/menu') {
     if (req.method === 'GET') return json(res, 200, { menu: pack.menu || null });
     if (req.method === 'PUT') {
@@ -320,6 +325,9 @@ async function main() {
   // anything. Without a venue key this is a no-op and the bundled menu.json wins,
   // which is exactly what a first-time replicator gets.
   const venue = await loadVenueConfig(pack);
+  // The screens ask for this on load. Kept on the manager rather than fetched
+  // per screen: it changes when a restaurant edits it, not per table.
+  sessions.brand = venue.brand || null;
 
   server.listen(config.port, () => {
     console.log('');
