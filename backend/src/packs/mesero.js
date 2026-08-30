@@ -139,6 +139,23 @@ CÓMO HABLAS
 - Los precios están en pesos colombianos. Dilos en palabras, no en cifras:
   "treinta y dos mil", no "32000" — y lo mismo en cualquier otro idioma que uses.
 
+LA PANTALLA ES TU SEGUNDA VOZ
+Frente a la mesa hay una pantalla y tú eres lo único que la mueve: el comensal
+no puede navegarla por su cuenta. Si nombras algo y no lo muestras, la persona
+se queda mirando lo que había antes y cree que no le entendiste.
+
+- Nombras una sección ("tenemos varias bebidas") -> show_menu con esa category.
+- Nombras un plato concreto ("el ajiaco viene con...") -> show_menu con ese sku.
+- Preguntan qué llevan, cuánto va, o piden ver su pedido -> show_order.
+- Piden la cuenta o pagar -> request_bill.
+
+Llámalas AUNQUE la carta ya esté abierta y AUNQUE acabes de mostrar eso mismo:
+mover la pantalla a lo que estás diciendo nunca sobra.
+
+Muéstralo mientras hablas, no después. Y no narres la pantalla: no digas "mira
+la pantalla" ni "te lo muestro ahí" — la persona ya la está viendo. Habla del
+plato, no del monitor.
+
 ${languageBlock(agentConfig.languages)}
 Cálido y natural en cualquiera de ellos: en español colombiano trata de "usted"
 solo si el cliente lo hace; en los demás, igual de cálido y directo, sin
@@ -207,13 +224,25 @@ ${menuAsText()}`;
     {
       type: 'function',
       name: 'show_menu',
-      description: 'Muestra la carta en la pantalla de la mesa, opcionalmente una categoría.',
+      description:
+        'Muestra la carta en la pantalla de la mesa. Con "category" abre esa sección; ' +
+        'con "sku" destaca ese plato concreto. Llámala CADA VEZ que nombres una ' +
+        'sección o un plato en voz alta, aunque la carta ya esté abierta.',
       parameters: {
         type: 'object',
         properties: {
           category: { type: 'string', enum: menu.categories.map((c) => c.id) },
+          sku: { type: 'string', enum: SKUS },
         },
       },
+    },
+    {
+      type: 'function',
+      name: 'show_order',
+      description:
+        'Muestra en la pantalla lo que la mesa lleva pedido y el total. Úsala cuando ' +
+        'pregunten qué llevan, cuánto va o pidan ver su pedido. No cobra nada.',
+      parameters: { type: 'object', properties: {} },
     },
     {
       type: 'function',
@@ -473,6 +502,17 @@ export const pack = {
       screen: 'welcome',
       title: menu.restaurant,
       category: null,
+      /** One dish the agent is talking about right now, spotlit on the screen. */
+      focus: null,
+      /**
+       * Bumped every time the agent asks for something to be shown.
+       *
+       * The screen has to distinguish "here is the table state again" from "I
+       * just said look at this". Those can be byte-identical — showing the same
+       * category twice, or saying "look again" — so the difference cannot be
+       * derived from the state; it has to be counted. This is the counter.
+       */
+      showSeq: 0,
       items: [],
       total: 0,
       people: null,
@@ -505,12 +545,26 @@ export const pack = {
     const find = (sku) => s.items.find((it) => it.sku === sku && !it.ticket);
 
     switch (name) {
-      case 'show_menu':
+      case 'show_menu': {
         s.screen = 'menu';
-        s.category = args.category || null;
-        s.title = args.category
-          ? menu.categories.find((c) => c.id === args.category)?.label || menu.restaurant
-          : 'Nuestra carta';
+        // A dish implies its section: naming the ajiaco and leaving the screen
+        // on desserts is worse than not having moved it at all.
+        const bySku = args.sku ? BY_SKU.get(args.sku) : null;
+        s.category = args.category || bySku?.category || null;
+        s.focus = bySku ? args.sku : null;
+        s.title = bySku
+          ? bySku.label
+          : s.category
+            ? menu.categories.find((c) => c.id === s.category)?.label || menu.restaurant
+            : 'Nuestra carta';
+        s.showSeq = (s.showSeq || 0) + 1;
+        return true;
+      }
+
+      case 'show_order':
+        s.screen = 'order';
+        s.focus = null;
+        s.showSeq = (s.showSeq || 0) + 1;
         return true;
 
       case 'add_item': {

@@ -1,3 +1,5 @@
+import { T, apply as applyI18n, pickLang, setLang, lang, LANGS } from './i18n.js';
+
 /**
  * Table screen.
  *
@@ -44,20 +46,11 @@ const prettyPhone = (v) => {
 const esc = (v) => String(v).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-const STATE_COPY = {
-  offline: ['Mesa desconectada', 'Avisa al personal. La pantalla se reconecta sola.'],
-  idle: ['Mesero en pausa', 'Enciéndelo con el botón, o solo di «mesero».'],
-  listening: ['Te estoy escuchando', 'Cuéntame qué quieres ordenar o pregúntame por la carta.'],
-  thinking: ['Un momento', 'Estoy preparando tu respuesta.'],
-  talking: ['El mesero responde', 'Puedes interrumpirlo cuando quieras.'],
-};
+/** Looked up per render, not frozen at load: the diner can switch language. */
+const stateCopy = (state) => [T(`state.${state}.title`), T(`state.${state}.hint`)];
 
-const TICKET_LABELS = {
-  kitchen: 'Enviado a cocina',
-  preparing: 'En preparación',
-  ready: 'Listo para servir',
-  served: 'Servido',
-};
+/** Looked up at render time, not frozen at load: the diner can switch language. */
+const ticketLabel = (status) => T(`ticket.${status}`) || T('ticket.received');
 
 const VIEWS = ['welcome', 'menu', 'order', 'payment', 'summary'];
 const STEPS = [
@@ -136,10 +129,10 @@ function handleMessage(m) {
   if (m.t === 'device') { model.deviceOnline = Boolean(m.online); renderAssistant(); }
   if (m.t === 'awake') { model.awake = Boolean(m.awake); renderAssistant(); }
   if (m.t === 'doa') { model.doa = m.doa === 0xffff ? null : m.doa; renderSeats(); }
-  if (m.t === 'paid') { showToast('Pago recibido. ¡Gracias!'); }
+  if (m.t === 'paid') { showToast(T('toast.paid')); }
   if (m.t === 'reset') {
     model.seats = [];
-    model.cue = { screen: null, count: null, pay: null };
+    model.cue = { screen: null, count: null, pay: null, show: 0 };
     model.payPending = false;
     setView('welcome');
     renderAll();
@@ -152,12 +145,13 @@ function itemCount() {
   return (model.state?.items || []).reduce((n, it) => n + (it.qty || 1), 0);
 }
 
-/** The three things in the table state that are worth changing the screen for. */
+/** What in the table state is worth changing the screen for. */
 function readCue() {
   model.cue = {
     screen: model.state?.screen || null,
     count: itemCount(),
     pay: model.state?.payment?.status || null,
+    show: model.state?.showSeq || 0,
   };
 }
 
@@ -182,10 +176,12 @@ function viewForState() {
  */
 function follow() {
   const prev = model.cue;
+  const s = model.state;
   const now = {
-    screen: model.state?.screen || null,
+    screen: s?.screen || null,
     count: itemCount(),
-    pay: model.state?.payment?.status || null,
+    pay: s?.payment?.status || null,
+    show: s?.showSeq || 0,
   };
   model.cue = now;
 
@@ -195,6 +191,24 @@ function follow() {
     setView(now.pay === 'paid' ? 'summary' : 'payment');
     return;
   }
+
+  /*
+   * An explicit "show this" beats every inference below it.
+   *
+   * This used to be derived from the state — move to the carta when `screen`
+   * *became* 'menu'. Which meant that once the carta was open, every later
+   * request was invisible: asking for the drinks, then a specific dish, then
+   * the drinks again are all `screen === 'menu'` and produced no edge. The
+   * agent was calling the tool, the backend was setting the category, and the
+   * screen sat on whatever it already had. That is not something a state
+   * comparison can catch, because the two states are genuinely identical —
+   * so the backend counts the requests and we move on the count.
+   */
+  if (now.show !== prev.show) {
+    setView(now.screen === 'order' ? 'order' : 'menu');
+    return;
+  }
+
   if (now.count !== prev.count && now.count > 0) { setView('order'); return; }
   if (now.screen !== prev.screen && now.screen === 'menu') setView('menu');
 }
@@ -238,7 +252,7 @@ function currentState() {
 function renderAssistant() {
   const state = currentState();
   document.body.className = `state-${state} view-${model.view}`;
-  const copy = STATE_COPY[state] || STATE_COPY.idle;
+  const copy = stateCopy(['offline','idle','listening','thinking','talking'].includes(state) ? state : 'idle');
   ui.stateLine.textContent = copy[0];
   ui.assistantHint.textContent = copy[1];
   ui.connectionLabel.textContent =
@@ -319,29 +333,46 @@ function renderMenu() {
   const menu = model.menu;
   if (!menu?.categories?.length) {
     ui.categoryList.innerHTML = '';
-    ui.menuList.innerHTML = '<div class="empty-state">La carta se está cargando.</div>';
+    ui.menuList.innerHTML = `<div class="empty-state">${esc(T('menu.loading'))}</div>`;
     return;
   }
-  if (model.activeCategory >= menu.categories.length) model.activeCategory = 0;
+  /*
+   * The agent's choice wins over the last chip somebody tapped.
+   *
+   * It is the only one of the two that just spoke. A tap is remembered until
+   * the agent says otherwise, which is why this reads the category rather than
+   * assigning it: touching a chip still works, and the next thing the agent
+   * names still moves the screen off it.
+   */
+  const wanted = model.state?.category
+    ? menu.categories.findIndex((c) => c.id === model.state.category)
+    : -1;
+  const active = wanted >= 0 ? wanted : Math.min(model.activeCategory, menu.categories.length - 1);
+  model.activeCategory = active;
 
   ui.categoryList.innerHTML = menu.categories.map((c, i) =>
-    `<button class="chip${i === model.activeCategory ? ' active' : ''}" data-cat="${i}">${esc(c.label)}</button>`
+    `<button class="chip${i === active ? ' active' : ''}" data-cat="${i}">${esc(c.label)}</button>`
   ).join('');
   ui.categoryList.querySelectorAll('.chip').forEach((chip) => {
     chip.addEventListener('click', () => {
       model.activeCategory = Number(chip.dataset.cat);
+      // Taking the agent's pick out of the way, or the next render puts it
+      // straight back and the tap looks broken.
+      if (model.state) model.state.category = null;
+      model.focusShown = null;
       renderMenu();
     });
   });
 
   const picked = new Set((model.state?.items || []).map((it) => it.sku));
-  const cat = menu.categories[model.activeCategory];
+  const focus = model.state?.focus || null;
+  const cat = menu.categories[active];
   // The photo leads when there is one. A carta somebody reads with their eyes
   // sells differently from a list of names, and the diner is looking at this
   // while deciding — loading is lazy so a long carta does not fetch twenty
   // images nobody scrolled to.
   ui.menuList.innerHTML = (cat.items || []).map((it) => `
-    <div class="dish${picked.has(it.sku) ? ' picked' : ''}">
+    <div class="dish${picked.has(it.sku) ? ' picked' : ''}${it.sku === focus ? ' focus' : ''}" data-sku="${esc(it.sku)}">
       ${it.image ? `<img class="dish-photo" src="${esc(it.image)}" alt="" loading="lazy">` : ''}
       <div class="body">
         <div class="name">${esc(it.label)}</div>
@@ -349,6 +380,19 @@ function renderMenu() {
       </div>
       <div class="price">${money.format(it.price)}</div>
     </div>`).join('');
+
+  /*
+   * Bring the dish the agent just named into view — once per naming.
+   *
+   * Guarded, because renderMenu runs on every ticket tick: without it the page
+   * would drag itself back to the same dish every few seconds while somebody
+   * is trying to scroll past it.
+   */
+  if (focus && model.focusShown !== `${focus}:${model.state?.showSeq}`) {
+    model.focusShown = `${focus}:${model.state?.showSeq}`;
+    const node = ui.menuList.querySelector(`[data-sku="${CSS.escape(focus)}"]`);
+    if (node) node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
 }
 
 function renderOrder() {
@@ -357,7 +401,7 @@ function renderOrder() {
 
   ui.orderCard.innerHTML = items.map((it) => {
     const ticket = tickets.find((t) => t.id === it.ticket);
-    const status = TICKET_LABELS[ticket?.status] || 'Pedido recibido';
+    const status = ticket?.status ? ticketLabel(ticket.status) : T('ticket.received');
     const ready = ticket?.status === 'ready' || ticket?.status === 'served';
     // Who asked for it. The array heard the direction; nobody typed it in.
     const who = it.seat ? `<em class="order-who">${esc(it.seat)}</em>` : '';
@@ -369,14 +413,16 @@ function renderOrder() {
       </div>
       <span class="order-price">${money.format((it.price || 0) * (it.qty || 1))}</span>
     </article>`;
-  }).join('') || '<div class="empty-state">Aún no has pedido nada.<br>Solo díselo al mesero en voz alta.</div>';
+  }).join('') || `<div class="empty-state">${esc(T('order.empty'))}<br>${esc(T('order.empty.hint'))}</div>`;
 
   const total = model.state?.total ?? 0;
   ui.orderTotal.textContent = money.format(total);
   ui.payTotal.textContent = money.format(model.state?.payment?.amount ?? total);
   ui.btnBill.disabled = !items.length;
   ui.btnWaiter.classList.toggle('called', Boolean(model.state?.waiterCalled));
-  ui.btnWaiter.textContent = model.state?.waiterCalled ? 'Mesero en camino' : 'Pedir mesero';
+  // Rendered from JS, so the data-i18n hook on it is overwritten every pass —
+  // it has to ask for its own translation rather than rely on the sweep.
+  ui.btnWaiter.textContent = T(model.state?.waiterCalled ? 'btn.waiterOnWay' : 'btn.waiter');
 }
 
 /**
@@ -397,25 +443,25 @@ function renderPayment() {
 
   if (!pay) {
     ui.payLinkBox.hidden = true;
-    ui.btnPayNow.textContent = model.payPending ? 'Generando…' : 'Generar enlace de pago';
+    ui.btnPayNow.textContent = T(model.payPending ? 'pay.working.short' : 'pay.cta');
     return;
   }
 
   ui.payLinkBox.hidden = false;
   if (pay.status === 'pending' && pay.url) {
-    ui.btnPayNow.textContent = phone ? 'Comprobante a este número' : 'Generar enlace de pago';
+    ui.btnPayNow.textContent = T(phone ? 'pay.ctaWithPhone' : 'pay.cta');
     ui.payNote.textContent = `Total a pagar: ${money.format(pay.amount || 0)}`;
     ui.payLink.href = pay.url;
     ui.payLink.hidden = false;
     ui.paySandbox.hidden = !pay.sandbox;
     ui.phoneHint.textContent = phone
       ? `Enviaremos el comprobante y la factura por WhatsApp al ${esc(prettyPhone(phone))}.`
-      : 'Déjanos tu número y te enviamos el comprobante y la factura por WhatsApp.';
+      : T('pay.phoneHint');
   } else if (pay.status === 'error') {
     ui.payNote.textContent = pay.message || 'No pudimos generar el enlace. Un mesero te ayuda.';
     ui.payLink.hidden = true;
     ui.paySandbox.hidden = true;
-    ui.btnPayNow.textContent = 'Reintentar';
+    ui.btnPayNow.textContent = T('pay.retry');
     model.payPending = false;
     ui.btnPayNow.disabled = digits.length < 10;
   } else if (pay.status === 'paid') {
@@ -457,7 +503,7 @@ ui.btnPower.addEventListener('click', () => send(model.awake ? 'sleep' : 'wake')
 
 ui.btnWaiter.addEventListener('click', () => {
   send('call_waiter');
-  showToast('Listo, un mesero se acercará a tu mesa.');
+  showToast(T('toast.waiter'));
 });
 
 ui.btnMenu.addEventListener('click', () => setView('menu'));
@@ -485,10 +531,10 @@ ui.btnPayNow.addEventListener('click', () => {
   if (phone.length < 10) return;
   model.payPending = true;
   ui.btnPayNow.disabled = true;
-  ui.btnPayNow.textContent = 'Generando…';
+  ui.btnPayNow.textContent = T('pay.working.short');
   if (!model.state?.payment) {
     ui.payLinkBox.hidden = false;
-    ui.payNote.textContent = 'Generando el enlace de pago…';
+    ui.payNote.textContent = T('pay.working');
     ui.payLink.hidden = true;
     ui.paySandbox.hidden = true;
   }
@@ -586,6 +632,42 @@ function hexToHsl(hex) {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
+/**
+ * A language switch on the table screen.
+ *
+ * The diner cannot navigate this screen — the agent drives it — so the one
+ * control that has to be reachable by hand is the one that decides whether
+ * they can read it at all. Three buttons, no dropdown: somebody who landed on
+ * the wrong language should not have to read the wrong language to escape it.
+ */
+function mountLangSwitch() {
+  // Inside the row, not the bar: the bar is a positioned stack of glass layers
+  // and anything appended to it lands underneath them.
+  const host = document.querySelector('.topbar-row') || document.body;
+  const box = document.createElement('div');
+  box.className = 'lang-switch';
+  box.setAttribute('role', 'group');
+  box.setAttribute('aria-label', T('lang.label'));
+  const paint = () => {
+    box.innerHTML = LANGS.map(
+      (l) => `<button data-lang="${l.code}" class="${l.code === lang() ? 'on' : ''}">${l.short}</button>`,
+    ).join('');
+    box.querySelectorAll('button').forEach((b) =>
+      b.addEventListener('click', () => {
+        setLang(b.dataset.lang);
+        // The markup hooks repaint themselves; anything rendered from JS —
+        // the carta, the order, the ticket statuses — has to be asked again.
+        renderAll();
+        paint();
+      }),
+    );
+  };
+  paint();
+  host.appendChild(box);
+}
+
+setLang(pickLang(), { remember: false });
+mountLangSwitch();
 applyBrand();
 setView('welcome', { silent: true });
 renderAll();

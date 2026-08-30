@@ -21,7 +21,7 @@
         <span class="brand-mark" aria-hidden="true">🍽️</span>
         <span class="brand-text">
           <strong id="place">Fogón de la Abuela</strong>
-          <small>Mesa <b id="dockLabel">01</b></small>
+          <small><span data-i18n="table">Mesa</span> <b id="dockLabel">01</b></small>
         </span>
       </div>
 
@@ -32,7 +32,7 @@
                  loop muted playsinline preload="auto" aria-hidden="true"></video>
           <i class="dot"></i>
         </div>
-        <span class="status-chip" id="statusChip"><i></i><span id="connectionLabel">Asistente activo</span></span>
+        <span class="status-chip" id="statusChip"><i></i><span id="connectionLabel" data-i18n="connected">Asistente activo</span></span>
         <button class="icon-button" id="btnPower" title="Encender o apagar el mesero" aria-label="Encender o apagar el mesero">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
             <path d="M12 3v9" /><path d="M6.3 6.3a8 8 0 1 0 11.4 0" />
@@ -46,8 +46,8 @@
     <!-- Left rail on a desktop, the whole screen when nothing is open. -->
     <aside class="agent-rail" id="agentRail">
       <div class="welcome" id="welcome">
-        <h1>¡Bienvenido!</h1>
-        <p>Habla con nuestro mesero. No tienes que tocar nada.</p>
+        <h1 data-i18n="title.welcome">¡Bienvenido!</h1>
+        <p data-i18n="welcome.sub">Habla con nuestro mesero. No tienes que tocar nada.</p>
       </div>
 
       <div class="orb-wrap">
@@ -59,62 +59,62 @@
         <div class="seat-ring" id="seatRing" aria-hidden="true"></div>
       </div>
 
-      <div class="state-pill glass" id="statePill"><i></i><span id="stateLine">Te estoy escuchando</span></div>
-      <p class="state-hint" id="assistantHint">Cuéntame qué quieres ordenar o pregúntame por la carta.</p>
+      <div class="state-pill glass" id="statePill"><i></i><span id="stateLine" data-i18n="state.listening">Te estoy escuchando</span></div>
+      <p class="state-hint" id="assistantHint" data-i18n="assistant.hint">Cuéntame qué quieres ordenar o pregúntame por la carta.</p>
 
       <div class="suggestions" id="suggestions">
-        <button class="suggestion" data-say="¿Qué me recomiendas hoy?">¿Qué me recomiendas?</button>
-        <button class="suggestion" data-say="Muéstrame la carta, por favor.">Ver la carta</button>
+        <button class="suggestion" data-i18n-say="suggest.recommend.say" data-i18n="suggest.recommend" data-say="¿Qué me recomiendas hoy?">¿Qué me recomiendas?</button>
+        <button class="suggestion" data-i18n-say="suggest.menu.say" data-i18n="suggest.menu" data-say="Muéstrame la carta, por favor.">Ver la carta</button>
       </div>
     </aside>
 
     <!-- One view at a time, exactly like the reference. -->
     <section class="view-area" id="viewArea">
       <div class="view-head">
-        <button class="back-button" id="btnBack" hidden>← Volver</button>
+        <button class="back-button" id="btnBack" data-i18n="back" hidden>← Volver</button>
         <nav class="steps" id="steps" aria-label="Etapas del pedido"></nav>
       </div>
 
       <div class="view" id="viewMenu" hidden>
-        <div class="view-title"><span class="kicker">Explora</span><h2>Nuestra carta</h2></div>
+        <div class="view-title"><span class="kicker" data-i18n="kicker.explore">Explora</span><h2 data-i18n="view.menu">Nuestra carta</h2></div>
         <div class="chips" id="categoryList" aria-label="Categorías"></div>
         <div class="menu-list" id="menuList"></div>
       </div>
 
       <div class="view" id="viewOrder" hidden>
-        <div class="view-title"><span class="kicker">En tiempo real</span><h2>Tu pedido</h2></div>
+        <div class="view-title"><span class="kicker" data-i18n="kicker.live">En tiempo real</span><h2 data-i18n="view.order">Tu pedido</h2></div>
         <div class="order-list" id="orderCard"></div>
         <div class="order-total">
-          <div><span>Total</span><small>IVA incluido</small></div>
+          <div><span data-i18n="total">Total</span><small data-i18n="total.tax">IVA incluido</small></div>
           <strong id="orderTotal">$ 0</strong>
         </div>
       </div>
 
       <div class="view" id="viewPayment" hidden>
-        <div class="view-title"><span class="kicker">Último paso</span><h2>Pagar la cuenta</h2></div>
+        <div class="view-title"><span class="kicker" data-i18n="kicker.last">Último paso</span><h2 data-i18n="view.pay">Pagar la cuenta</h2></div>
         <div class="pay-summary">
-          <span>Total de la mesa</span>
+          <span data-i18n="pay.total">Total de la mesa</span>
           <strong id="payTotal">$ 0</strong>
         </div>
         <label class="field">
-          <span>¿A qué número te enviamos el comprobante?</span>
+          <span data-i18n="pay.phoneAsk">¿A qué número te enviamos el comprobante?</span>
           <input id="phoneInput" type="tel" inputmode="numeric" autocomplete="tel"
-                 placeholder="300 123 4567" maxlength="14" />
-          <small id="phoneHint">Usaremos este número también para enviarte la factura por WhatsApp.</small>
+                 data-i18n-ph="pay.phonePh" placeholder="300 123 4567" maxlength="14" />
+          <small id="phoneHint" data-i18n="pay.phoneHint">Usaremos este número también para enviarte la factura por WhatsApp.</small>
         </label>
-        <button class="cta" id="btnPayNow" disabled>Generar enlace de pago</button>
+        <button class="cta" id="btnPayNow" data-i18n="pay.cta" disabled>Generar enlace de pago</button>
         <div class="pay-link-box" id="payLinkBox" hidden>
-          <p class="pay-note" id="payNote">Generando el enlace…</p>
-          <a class="cta" id="payLink" target="_blank" rel="noopener" hidden>Ir a pagar</a>
-          <p class="pay-sandbox" id="paySandbox" hidden>Modo de pruebas · no se cobra dinero real</p>
+          <p class="pay-note" id="payNote" data-i18n="pay.working">Generando el enlace…</p>
+          <a class="cta" id="payLink" target="_blank" rel="noopener" data-i18n="pay.go" hidden>Ir a pagar</a>
+          <p class="pay-sandbox" id="paySandbox" data-i18n="pay.sandbox" hidden>Modo de pruebas · no se cobra dinero real</p>
         </div>
       </div>
 
       <div class="view" id="viewSummary" hidden>
         <div class="summary-card">
           <div class="success-mark">✓</div>
-          <h2 id="summaryTitle">¡Gracias por visitarnos!</h2>
-          <p id="summaryText">Tu pago fue recibido.</p>
+          <h2 id="summaryTitle" data-i18n="summary.title">¡Gracias por visitarnos!</h2>
+          <p id="summaryText" data-i18n="summary.text">Tu pago fue recibido.</p>
           <div class="receipt" id="receipt"></div>
         </div>
       </div>
@@ -122,12 +122,12 @@
   </main>
 
   <nav class="bottom-actions" aria-label="Acciones">
-    <button class="service-button" id="btnWaiter">Pedir mesero</button>
-    <button class="service-button" id="btnMenu">La carta</button>
-    <button class="service-button primary" id="btnBill">La cuenta</button>
+    <button class="service-button" id="btnWaiter" data-i18n="btn.waiter">Pedir mesero</button>
+    <button class="service-button" id="btnMenu" data-i18n="btn.menu">La carta</button>
+    <button class="service-button primary" id="btnBill" data-i18n="btn.bill">La cuenta</button>
   </nav>
 
   <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastText"></span></div>
-  <script src="/app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>
