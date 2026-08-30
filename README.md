@@ -143,8 +143,12 @@ or scan the QR the console prints for that table and every field arrives filled.
 **3 · Run the backend.** Locally as above, or as a container:
 
 ```bash
-docker compose -f deploy/cloud/docker-compose.yml up -d
+docker build -t mesero-ai .
+docker run -p 8787:8787 -e VENUE_KEY=msr_live_… mesero-ai
 ```
+
+`deploy/cloud/` adds Caddy in front of it, which obtains and renews the
+certificate on its own.
 
 See [`docs/servidor.md`](docs/servidor.md) for where it should live and why a
 diner's mobile data settles the question.

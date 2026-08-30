@@ -1,5 +1,10 @@
 # The backend, for a host with a public name and a certificate.
 #
+# At the repository root on purpose: platforms find it here without being told,
+# and `docker build .` works with no arguments. Railway was ignoring a pointer
+# to it elsewhere and falling back to its own language detector, which cannot
+# make sense of a repository holding firmware, CAD and a backend at once.
+#
 # This is the shape that matters: a diner is on their own mobile data, not the
 # restaurant's WiFi, so the table screen has to be reachable from the internet.
 # A machine behind the bar cannot be, without a tunnel and a firewall argument.
