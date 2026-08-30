@@ -458,6 +458,13 @@ static void pollDoa() {
 #ifndef DEFAULT_BACKEND_HOST
 #define DEFAULT_BACKEND_HOST "restaurant.gabotrix.com"
 #endif
+// Lets a bench provision a gadget without opening the portal — useful when the
+// same key goes into twenty tables in a row. Never committed with a value in it:
+// it is passed on the build command line.
+#ifndef DEFAULT_VENUE_KEY
+#define DEFAULT_VENUE_KEY ""
+#endif
+
 #ifndef DEFAULT_BACKEND_PORT
 #define DEFAULT_BACKEND_PORT 443
 #endif
@@ -525,10 +532,11 @@ void setup() {
   // from the compiled defaults without touching saved WiFi credentials. Useful
   // when a device is stuck dialling an address that no longer exists.
 #ifdef FORCE_CFG
-  // The venue key survives: it says which restaurant this table belongs to, not
-  // which network it is on, and re-typing a 56-character key on a bench is a
-  // punishment nobody deserves.
-  saveConfig(DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT, DEFAULT_DOCK, cfgVenueKey);
+  // The venue key survives unless the build supplies one: it says which
+  // restaurant this table belongs to, not which network it is on, and re-typing
+  // a 56-character key on a bench is a punishment nobody deserves.
+  saveConfig(DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT, DEFAULT_DOCK,
+             strlen(DEFAULT_VENUE_KEY) ? String(DEFAULT_VENUE_KEY) : cfgVenueKey);
   Serial.printf("[cfg] forced to %s:%u dock=%s\n", DEFAULT_BACKEND_HOST,
                 (unsigned)DEFAULT_BACKEND_PORT, DEFAULT_DOCK);
 #endif
