@@ -186,6 +186,25 @@ story.
 > Web Serial exists only in desktop Chrome and Edge. Not Safari, not Firefox,
 > and no mobile browser at all — which is exactly why the second door stays.
 
+The same screen lives in **Conexión → Conectar un gadget** for a restaurant
+that already exists. That is where the commonest errand happens: the WiFi
+password changed. Plug the gadget in, pick the new network, save. It keeps its
+venue key and its table — you only change what you came to change.
+
+### Forgetting a network without forgetting everything
+
+Holding **BOOT** on the gadget does two different things, and the difference
+matters:
+
+| Hold | What it forgets |
+| --- | --- |
+| 3 seconds | The WiFi network only. Venue key and table survive. |
+| 10 seconds | Everything, for a gadget moving to another restaurant. |
+
+Watch the serial monitor while you hold it — it says which one you are about to
+get before you let go. This used to be a single gesture that wiped all of it,
+so the price of a new WiFi password was finding a forty-character key again.
+
 ### From a phone, over the gadget's own WiFi
 
 Power the gadget. It raises a WiFi network called **MeseroAI-setup**. Join it

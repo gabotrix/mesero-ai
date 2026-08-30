@@ -564,10 +564,21 @@ static void handleWireCommand(const String &line) {
     const char *ssid = in["ssid"] | "";
     if (!*ssid) { wireError("ssid requerido"); return; }
 
-    String host = in["host"] | cfgHost;
+    /*
+     * An empty field means "leave this alone", which is not what ArduinoJson's
+     * `|` does: it substitutes the default only when the key is *missing*, so a
+     * present-but-empty venue would have wiped the key. That is exactly the
+     * wrong outcome for the most common errand this command serves — somebody
+     * came to change the WiFi password, not to un-register the gadget.
+     */
+    auto keep = [&](const char *field, const String &current) {
+      const char *v = in[field] | "";
+      return *v ? String(v) : current;
+    };
+    String host = keep("host", cfgHost);
+    String dock = keep("dock", cfgDock);
+    String venue = keep("venue", cfgVenueKey);
     uint16_t port = in["port"] | cfgPort;
-    String dock = in["dock"] | cfgDock;
-    String venue = in["venue"] | cfgVenueKey;
     saveConfig(host, port, dock, venue);
 
     // WiFi credentials go where the portal would have put them, so both doors
@@ -767,22 +778,60 @@ void setup() {
  * power-on is exactly how the ESP32-S3 is put into firmware download mode, so a
  * routine reflash would silently wipe the table's provisioning.
  */
+/**
+ * Two gestures, because they answer two different problems.
+ *
+ * A restaurant changes its WiFi password. That used to cost them the venue key
+ * as well: one hold cleared the network *and* wiped NVS, so the price of a new
+ * password was finding a forty-character key again and retyping it at the
+ * table. Those are not the same event and should not have the same button.
+ *
+ *   3 s  — forget the network only. Everything that identifies this gadget
+ *          survives, and it comes back up asking for a network.
+ *   10 s — forget everything, for a gadget leaving for another restaurant.
+ *
+ * The LED is what tells them apart while the button is down; nobody counts
+ * seconds accurately with a finger on a board.
+ */
 static void checkProvisioningReset() {
   static uint32_t heldSince = 0;
-  if (digitalRead(PIN_BOOT_BUTTON) == LOW) {
-    if (heldSince == 0) heldSince = millis();
-    else if (millis() - heldSince > 3000) {
-      Serial.println("[wifi] BOOT held 3 s - clearing provisioning, rebooting");
+  static bool announcedWifi = false;
+  static bool announcedFull = false;
+
+  if (digitalRead(PIN_BOOT_BUTTON) != LOW) {
+    // Released. Act on how long it was actually held.
+    if (heldSince && millis() - heldSince > 3000) {
+      uint32_t held = millis() - heldSince;
       WiFiManager wm;
       wm.resetSettings();
-      prefs.begin("mesero", false);
-      prefs.clear();
-      prefs.end();
+      if (held > 10000) {
+        Serial.println("[wifi] BOOT held 10 s - full reset (network, key, table)");
+        prefs.begin("mesero", false);
+        prefs.clear();
+        prefs.end();
+      } else {
+        Serial.println("[wifi] BOOT held 3 s - network forgotten, key and table kept");
+      }
       delay(300);
       ESP.restart();
     }
-  } else {
     heldSince = 0;
+    announcedWifi = announcedFull = false;
+    return;
+  }
+
+  if (heldSince == 0) {
+    heldSince = millis();
+    return;
+  }
+  uint32_t held = millis() - heldSince;
+  if (held > 3000 && !announcedWifi) {
+    announcedWifi = true;
+    Serial.println("[wifi] suelta ahora para olvidar solo la red; sigue para borrar todo");
+  }
+  if (held > 10000 && !announcedFull) {
+    announcedFull = true;
+    Serial.println("[wifi] suelta ahora para borrar TODO");
   }
 }
 
