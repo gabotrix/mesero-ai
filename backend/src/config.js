@@ -58,14 +58,40 @@ export const config = {
   pack: process.env.PACK || 'mesero',
 
   /**
-   * Identifies this restaurant to the voice service. Issued self-serve by the
-   * console; it is what lets somebody build this gadget without opening an
-   * account at a single vendor.
+   * Which voice backend to use: 'gabotrix' | 'openai' | 'local'.
    *
-   * Empty is legal — the backend then runs on the carta bundled in this
+   * A restaurant chooses this in the console, and the console shows what to set
+   * here. Anything other than the default means the credential — or the machine
+   * — is yours, which also means you are hosting this backend yourself. That is
+   * not a restriction, it is arithmetic: we cannot reach a model on your LAN.
+   */
+  provider: (process.env.PROVIDER || 'gabotrix').toLowerCase(),
+
+  /**
+   * Identifies this restaurant to the voice service, and to the carta, the
+   * tables and the agent that come with it. The only thing a `gabotrix`
+   * deployment configures.
+   *
+   * Empty is legal — the backend then runs on the carta committed in this
    * repository, which is enough to hear it work.
    */
   venueKey: process.env.VENUE_KEY || '',
+
+  /** Only read when PROVIDER=openai. */
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || '',
+    model: process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime',
+    baseUrl: process.env.OPENAI_REALTIME_URL || 'wss://api.openai.com/v1/realtime',
+  },
+
+  /**
+   * Only read when PROVIDER=local. Speaks the envelope in docs/voz-local.md,
+   * which is the same one the hosted bridge speaks.
+   */
+  localVoice: {
+    url: process.env.LOCAL_VOICE_URL || 'ws://localhost:8080/voice',
+    token: process.env.LOCAL_VOICE_TOKEN || '',
+  },
 
   /**
    * Where the voice service lives. A hostname, not a secret.
@@ -167,6 +193,16 @@ const REQUIRED_NUMBERS = [
 ];
 
 export function assertConfig() {
+  if (!['gabotrix', 'openai', 'local'].includes(config.provider)) {
+    throw new Error(`PROVIDER debe ser 'gabotrix', 'openai' o 'local'; llegó '${config.provider}'`);
+  }
+  if (config.provider === 'openai' && !config.openai.apiKey) {
+    throw new Error('PROVIDER=openai necesita OPENAI_API_KEY');
+  }
+  if (config.provider === 'local' && !config.localVoice.url) {
+    throw new Error('PROVIDER=local necesita LOCAL_VOICE_URL');
+  }
+
   const broken = REQUIRED_NUMBERS.filter(
     (k) => typeof config[k] !== 'number' || !Number.isFinite(config[k])
   );

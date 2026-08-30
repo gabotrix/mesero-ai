@@ -97,9 +97,15 @@ venue key is the only credential this backend ever carries, and its carta, its
 tables and its agent arrive with it. The backend caches them to disk, so a
 restaurant whose internet drops at seven in the evening still serves dinner.
 
+Or bring your own. `PROVIDER=openai` talks to OpenAI with your credential;
+`PROVIDER=local` talks to a model on your own hardware and keeps working when the
+internet does not. Both mean you host the backend — we cannot reach a model on
+your LAN, and we should not be holding your vendor key. The contract for a local
+one is in [`docs/voz-local.md`](docs/voz-local.md); an adapter is about a hundred
+lines.
+
 Everything else in this repository runs without any of that — the wire protocol,
-the firmware, the order state, the screens, the case. Point the provider at your
-own service and the key stops mattering.
+the firmware, the order state, the screens, the case.
 
 No hardware yet? `device-client/` is a Python stand-in that speaks the same
 protocol using your laptop's microphone.
@@ -164,6 +170,7 @@ diner's mobile data settles the question.
 | [`hardware/case/`](hardware/case/) | Parametric case and phone cradle |
 | [`device-client/`](device-client/) | Python stand-in for the gadget |
 | [`deploy/`](deploy/) | Container and appliance deployments |
+| [`docs/voz-local.md`](docs/voz-local.md) | Running the voice model on your own hardware |
 
 ## Design decisions worth knowing
 
