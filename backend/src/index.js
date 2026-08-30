@@ -215,9 +215,23 @@ server.on('upgrade', (req, socket, head) => {
 
 deviceWss.on('connection', (ws, req, url) => {
   const dock = url.searchParams.get('dock') || 'mesa-01';
-  const token = url.searchParams.get('token');
-  if (!config.allowAnonymousDevices && !token) {
-    ws.close(4401, 'device token required');
+  /**
+   * A gadget proves which restaurant it belongs to with its venue key — the same
+   * credential the voice, the payments and the carta already check, and the one
+   * the firmware actually carries.
+   *
+   * What was here before asked for a `token` that was never compared against
+   * anything: any non-empty string opened the door, while the real firmware sent
+   * none at all. Turning that check on in production would have rejected every
+   * gadget in the restaurant and left the tables silent.
+   *
+   * With no venue key configured this backend is somebody's laptop running the
+   * open-source stack against the bundled carta, and there is nothing to prove.
+   */
+  const presented = url.searchParams.get('venue');
+  if (config.venueKey && presented !== config.venueKey) {
+    console.log(`[${dock}] device refused: ${presented ? 'wrong venue key' : 'no venue key'}`);
+    ws.close(4401, 'venue key required');
     return;
   }
 

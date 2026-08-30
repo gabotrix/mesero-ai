@@ -89,9 +89,6 @@ export const config = {
   /** Sample rate the realtime provider speaks. The device always speaks 16 kHz. */
   providerRate: Number(process.env.PROVIDER_RATE || 24000),
 
-  /** Accept device connections without a token (development only). */
-  allowAnonymousDevices: process.env.ALLOW_ANON_DEVICES !== 'false',
-
   /**
    * RMS a frame must reach to interrupt the agent mid-sentence. Echo residue and
    * room noise sit well below this; a person speaking up is far above it.
