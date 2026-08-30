@@ -71,6 +71,14 @@ monitor attached; and the XMOS chip already does echo cancellation, beamforming
 and noise suppression **in silicon**, so repeating it here would be slower and
 worse.
 
+## Build one
+
+[`docs/build-guide.md`](docs/build-guide.md) takes you from an empty desk to a
+table that takes an order out loud — about three hours, most of it printing. It
+includes the calibration coupon to print before you commit four hours to a lid,
+and a troubleshooting section where every entry is a failure we actually hit,
+with what it looked like at the time.
+
 ## Quick start
 
 You need the two Seeed boards, a speaker, and about twenty minutes.
@@ -163,6 +171,7 @@ diner's mobile data settles the question.
 
 | Path | What it is |
 | --- | --- |
+| [`docs/build-guide.md`](docs/build-guide.md) | **Start here.** Empty desk to a talking table, and what every failure looks like when it happens |
 | [`docs/protocolo.md`](docs/protocolo.md) | **The contract.** Binary audio frames plus JSON control, implemented identically by the firmware and the desktop client |
 | [`firmware/`](firmware/) | ESP32S3 firmware — I2S, WebSocket, LED ring, setup portal |
 | [`backend/`](backend/) | Session bridge: device audio ⇄ model, order state, screen fan-out |
