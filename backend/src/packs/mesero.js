@@ -15,7 +15,75 @@ let menu = JSON.parse(readFileSync(MENU_PATH, 'utf8'));
  * real tables to get right, and it stays in the repository where it can be read
  * and improved rather than being retyped into a form by every venue.
  */
-let agentConfig = { name: 'Mesero', persona: '', greeting: '', wakeWord: 'mesero' };
+let agentConfig = {
+  name: 'Mesero',
+  persona: '',
+  greeting: '',
+  wakeWord: 'mesero',
+  // Which languages this agent serves in, in order. The first is the one it
+  // greets in; more than one means it follows whoever it is talking to.
+  languages: ['es', 'en'],
+};
+
+/**
+ * The languages we can name in the prompt, written as the prompt writes them.
+ *
+ * A restaurant configures a set rather than a single language because that is
+ * what a room actually looks like: a table in Cartagena is Spanish and English
+ * at once, and the interesting behaviour — answer each person in the language
+ * they used — only exists when there is more than one.
+ */
+const LANGUAGE_NAMES = {
+  es: 'español',
+  en: 'inglés',
+  zh: 'chino mandarín',
+  pt: 'portugués',
+  fr: 'francés',
+  de: 'alemán',
+  it: 'italiano',
+  ja: 'japonés',
+};
+
+/**
+ * "español, inglés y chino mandarín" — with the conjunction Spanish actually
+ * uses. `y` becomes `e` before a word that starts with an i- sound, so a list
+ * ending in "inglés" or "italiano" needs "e inglés", not "y inglés". The prompt
+ * is written in Spanish and read by a model that will imitate its register;
+ * feeding it broken Spanish is not free.
+ */
+function enumerateEs(names) {
+  if (names.length === 1) return names[0];
+  const last = names[names.length - 1];
+  const conj = /^(i|hi)(?!e)/i.test(last) ? 'e' : 'y';
+  return `${names.slice(0, -1).join(', ')} ${conj} ${last}`;
+}
+
+function languageBlock(codes) {
+  const list = (Array.isArray(codes) ? codes : []).filter((c) => LANGUAGE_NAMES[c]);
+  const langs = list.length ? list : ['es'];
+  const names = langs.map((c) => LANGUAGE_NAMES[c]);
+  const primary = names[0];
+
+  if (names.length === 1) {
+    return `IDIOMA
+Atiendes en ${primary}. Saluda y responde siempre en ${primary}.
+Si alguien te habla en otro idioma, sigue en ${primary} con amabilidad y usa
+frases más simples: es mejor que te entiendan despacio a que cambies a un idioma
+en el que la carta no existe.
+`;
+  }
+
+  return `IDIOMA
+Atiendes en ${enumerateEs(names)}. Saluda en ${primary}; si alguien te habla en
+otro de esos idiomas, sigue con esa persona en el suyo desde ahí, sin anunciar el
+cambio y sin preguntar qué idioma prefiere.
+
+En una misma mesa puede haber gente que habla distinto idioma. Recuerda en cuál
+te habló cada quien y respóndele siempre en el suyo, aunque el de al lado use
+otro. Si dos personas hablan idiomas distintos en un mismo turno, contesta en el
+del último que habló.
+`;
+}
 
 const BY_SKU = new Map();
 let SKUS = [];
@@ -68,26 +136,18 @@ CÓMO HABLAS
 - Frases cortas. Es una conversación hablada, no un texto leído.
 - Nunca leas la carta entera de corrido. Sugiere dos o tres cosas y pregunta.
 - No inventes platos ni precios: solo existe lo que está en la carta.
-- Los precios están en pesos colombianos. Di "treinta y dos mil", no "32000";
-  en inglés, "thirty-two thousand pesos".
+- Los precios están en pesos colombianos. Dilos en palabras, no en cifras:
+  "treinta y dos mil", no "32000" — y lo mismo en cualquier otro idioma que uses.
 
-IDIOMA
-Atiendes en español y en inglés. Saluda en español; si alguien te habla en
-inglés, sigue con esa persona en inglés desde ahí, sin anunciar el cambio y sin
-preguntar qué idioma prefiere.
-
-En una misma mesa puede haber gente que habla distinto idioma. Recuerda en cuál
-te habló cada quien y respóndele siempre en el suyo, aunque el de al lado use
-otro. Si dos personas hablan idiomas distintos en un mismo turno, contesta en el
-del último que habló.
-
-En español colombiano, cálido y natural; trata de "usted" solo si el cliente lo
-hace. En inglés, igual de cálido y directo, sin formalismos rígidos.
+${languageBlock(agentConfig.languages)}
+Cálido y natural en cualquiera de ellos: en español colombiano trata de "usted"
+solo si el cliente lo hace; en los demás, igual de cálido y directo, sin
+formalismos rígidos.
 
 Los nombres de los platos NO se traducen: son "bandeja paisa", "ajiaco",
-"patacones" también en inglés. Si preguntan qué son, explícalos en su idioma —
-di el nombre y luego descríbelo. Traducir "bandeja paisa" a "paisa tray" no
-ayuda a nadie a pedir, y en la carta no existe con ese nombre.
+"patacones" en cualquier idioma. Si preguntan qué son, explícalos en el idioma de
+quien pregunta — di el nombre y luego descríbelo. Traducir "bandeja paisa" a
+"paisa tray" no ayuda a nadie a pedir, y en la carta no existe con ese nombre.
 
 CUÁNDO HABLAR Y CUÁNDO CALLARTE
 Estás sobre una mesa donde la gente conversa entre sí. La mayor parte de lo que
@@ -318,6 +378,9 @@ export const pack = {
       persona: String(next.persona || ''),
       greeting: String(next.greeting || ''),
       wakeWord: String(next.wake_word || next.wakeWord || agentConfig.wakeWord),
+      languages: Array.isArray(next.languages) && next.languages.length
+        ? next.languages
+        : agentConfig.languages,
     };
     rebuild();
   },
