@@ -119,7 +119,7 @@ export const config = {
    * RMS a frame must reach to interrupt the agent mid-sentence. Echo residue and
    * room noise sit well below this; a person speaking up is far above it.
    */
-  bargeInLevel: Number(process.env.BARGE_IN_LEVEL || 2500),
+  bargeInLevel: Number(process.env.BARGE_IN_LEVEL || 1200),
 
   /**
    * Consecutive frames the array must call speech before we cut the agent off.
@@ -128,7 +128,7 @@ export const config = {
    * faster than a person notices, and long enough that a cough or a plate does
    * not stop a sentence.
    */
-  bargeInFrames: Number(process.env.BARGE_IN_FRAMES || 4),
+  bargeInFrames: Number(process.env.BARGE_IN_FRAMES || 3),
 
   /**
    * How long echo is still assumed present after the last frame is handed to the

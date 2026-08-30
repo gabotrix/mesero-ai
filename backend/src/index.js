@@ -378,6 +378,20 @@ async function main() {
   // The screens ask for this on load. Kept on the manager rather than fetched
   // per screen: it changes when a restaurant edits it, not per table.
   sessions.brand = venue.brand || null;
+  /*
+   * How many chairs each table has, straight from the console.
+   *
+   * The bearing clustering has no idea how many people it is looking for, so a
+   * diner who leans forward between turns can open a second customer and a
+   * table of four ends up showing six. A table has a fixed number of chairs and
+   * the console already knows it; past that number a new direction is somebody
+   * moving, not somebody arriving.
+   */
+  sessions.capacity = new Map(
+    (venue.docks || [])
+      .filter((d) => d?.code && Number(d.seats) > 0)
+      .map((d) => [String(d.code), Number(d.seats)]),
+  );
 
   server.listen(config.port, () => {
     console.log('');

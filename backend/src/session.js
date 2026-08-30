@@ -375,8 +375,33 @@ export class Session {
     // That flag rides in every frame header; it is a far better answer than any
     // number we could pick here.
     const speech = Boolean(frame.flags & FLAG_VAD);
-    const guarded = this.agentState === 'talking' || Date.now() < this.echoGuardUntil;
-    if (guarded && (!speech || level < config.bargeInLevel)) {
+    const talking = this.agentState === 'talking';
+    const echoTail = !talking && Date.now() < this.echoGuardUntil;
+
+    /*
+     * While the agent holds the floor, the array's detector decides alone.
+     *
+     * This used to also demand a level above bargeInLevel, which contradicted
+     * the paragraph above it and made the agent nearly impossible to interrupt:
+     * post-AEC, at conversational distance across a table, a normal voice does
+     * not clear 2500. You had to raise your voice at it — and a diner who has
+     * to shout to interrupt a waiter concludes the waiter is not listening.
+     *
+     * The detector runs after echo cancellation, so it stays quiet through the
+     * agent's own speech. That is the whole reason to trust it here.
+     */
+    if (talking && !speech) {
+      this.suppressedFrames++;
+      this.bargeFrames = 0;
+      return;
+    }
+
+    /*
+     * In the tail right after the agent stops, the level still earns its place:
+     * cancellation is imperfect on the decay and residual echo can trip the
+     * detector for a moment.
+     */
+    if (echoTail && (!speech || level < config.bargeInLevel)) {
       this.suppressedFrames++;
       this.bargeFrames = 0;
       return;
@@ -980,6 +1005,8 @@ export class SessionManager {
     let s = this.sessions.get(dock);
     if (!s) {
       s = new Session(dock, this.pack);
+      const chairs = this.capacity?.get(dock);
+      if (chairs) s.seats.setCapacity(chairs);
       this.sessions.set(dock, s);
       console.log(`[${dock}] session created ${s.id}`);
     }

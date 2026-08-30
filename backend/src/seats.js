@@ -41,6 +41,19 @@ export class SeatMap {
     /** @type {{id:number, label:string, angle:number, samples:number}[]} */
     this.seats = [];
     this.nextId = 1;
+    /**
+     * How many chairs this table has, when the console has been told.
+     *
+     * Zero means unknown and the map grows freely, which is what a replicator
+     * running on the bundled menu gets. When it is known it is a hard ceiling:
+     * the clustering cannot count, and without a ceiling a diner who leans
+     * forward between turns opens a second customer that never closes.
+     */
+    this.capacity = 0;
+  }
+
+  setCapacity(n) {
+    this.capacity = Number(n) > 0 ? Math.floor(Number(n)) : 0;
   }
 
   /**
@@ -77,6 +90,23 @@ export class SeatMap {
       best.angle = blend(best.angle, angle, w);
       this.consolidate();
       return { id: best.id, label: best.label, angle: best.angle };
+    }
+
+    /*
+     * At capacity, a new direction is somebody moving, not somebody arriving.
+     *
+     * Snapping to the nearest seat is wrong sometimes — but it is wrong in the
+     * recoverable direction. A dish on the wrong side of a table of four gets
+     * passed; a phantom fifth customer splits somebody's order in half and
+     * never goes away, and the bill at the end is nonsense.
+     */
+    if (this.capacity && this.seats.length >= this.capacity) {
+      if (best) {
+        best.samples++;
+        best.angle = blend(best.angle, angle, (1 / Math.min(best.samples, 8)) * 0.4);
+        return { id: best.id, label: best.label, angle: best.angle };
+      }
+      return null;
     }
 
     const seat = {

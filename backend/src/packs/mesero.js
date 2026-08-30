@@ -542,7 +542,28 @@ export const pack = {
     const recompute = () => {
       s.total = s.items.reduce((acc, it) => acc + it.price * it.qty, 0);
     };
-    const find = (sku) => s.items.find((it) => it.sku === sku && !it.ticket);
+    /**
+     * Finds the speaker's own line for a dish, not just anybody's.
+     *
+     * This used to match on sku alone, and that quietly undid the whole point
+     * of the project: two people ordering the same lemonade collapsed into one
+     * line of two under whoever spoke first, and the second person vanished
+     * from their own order. Attribution is the feature — it cannot be defeated
+     * by two friends wanting the same drink.
+     *
+     * Falls back to a seatless line when the speaker is unknown, and to any
+     * line as a last resort so "take that off" still works when the bearing
+     * was not resolved. Unattributed lines merge with each other, which is
+     * right: they are all just "the table".
+     */
+    const find = (sku, seat = null) => {
+      const open = s.items.filter((it) => it.sku === sku && !it.ticket);
+      return (
+        open.find((it) => (it.seat ?? null) === (seat ?? null)) ??
+        (seat ? null : open[0]) ??
+        null
+      );
+    };
 
     switch (name) {
       case 'show_menu': {
@@ -571,7 +592,8 @@ export const pack = {
         const def = BY_SKU.get(args.sku);
         if (!def) return false;
         const qty = Math.max(1, Number(args.qty) || 1);
-        const existing = find(args.sku);
+        const seat = ctx.seat?.label || null;
+        const existing = find(args.sku, seat);
         if (existing) {
           existing.qty += qty;
           if (args.note) existing.note = args.note;
@@ -584,7 +606,7 @@ export const pack = {
             note: args.note || '',
             // Which direction this dish was ordered from, so the plate reaches
             // the right person without anyone having to ask.
-            seat: ctx.seat?.label || null,
+            seat,
             seatAngle: ctx.seat?.angle ?? null,
             /** Set when the round is confirmed; null while still editable. */
             ticket: null,
@@ -597,7 +619,7 @@ export const pack = {
       }
 
       case 'update_item_qty': {
-        const it = find(args.sku);
+        const it = find(args.sku, ctx.seat?.label || null) ?? find(args.sku);
         if (!it) return false;
         const qty = Number(args.qty);
         if (qty <= 0) s.items = s.items.filter((x) => x !== it);
@@ -607,7 +629,7 @@ export const pack = {
       }
 
       case 'remove_item': {
-        const it = find(args.sku);
+        const it = find(args.sku, ctx.seat?.label || null) ?? find(args.sku);
         if (!it) return false;
         s.items = s.items.filter((x) => x !== it);
         recompute();
@@ -615,7 +637,7 @@ export const pack = {
       }
 
       case 'set_item_note': {
-        const it = find(args.sku);
+        const it = find(args.sku, ctx.seat?.label || null) ?? find(args.sku);
         if (!it) return false;
         it.note = args.note || '';
         return true;

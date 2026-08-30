@@ -168,3 +168,25 @@ test('genuinely separate people are not folded together', () => {
   }
   assert.equal(seats.list().length, 2);
 });
+
+test('a table cannot hold more customers than it has chairs', () => {
+  const seats = new SeatMap();
+  seats.setCapacity(4);
+
+  // Four diners, then a fifth direction that is really one of them leaning in.
+  for (const a of [0, 90, 180, 270]) seats.resolve(a, 1);
+  assert.equal(seats.list().length, 4);
+
+  const strayed = seats.resolve(45, 1);
+  assert.equal(seats.list().length, 4, 'una silla de más apareció en una mesa de cuatro');
+  assert.ok(strayed, 'la voz sigue perteneciendo a alguien: no se descarta');
+  // 45° sits between the diners at 0° and 90°, so either neighbour is a
+  // defensible answer; what must not happen is a fifth person.
+  assert.ok([1, 2].includes(strayed.id), `fue a parar al cliente ${strayed.id}`);
+});
+
+test('without a known chair count the map still grows freely', () => {
+  const seats = new SeatMap();
+  for (const a of [0, 90, 180, 270, 45]) seats.resolve(a, 1);
+  assert.equal(seats.list().length, 5, 'sin capacidad declarada no hay tope');
+});
