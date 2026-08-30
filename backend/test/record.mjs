@@ -20,7 +20,7 @@ const chunks = [];
 const ui = new WebSocket(`${BASE}/ui?dock=${DOCK}`);
 await new Promise((r) => ui.once('open', r));
 
-const dev = new WebSocket(`${BASE}/device?dock=${DOCK}`);
+const dev = new WebSocket(`${BASE}/device?dock=${DOCK}&venue=${process.env.VENUE_KEY ?? ''}`);
 dev.binaryType = 'nodebuffer';
 let ready = false;
 

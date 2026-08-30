@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import WebSocket from 'ws';
 
 /**
  * Realtime provider that speaks to a Supabase Edge Function which in turn
@@ -8,7 +9,11 @@ import { EventEmitter } from 'node:events';
  * the device ever holds a model credential — which is exactly what we want on a
  * box sitting in a restaurant.
  *
- * Uses Node's built-in WebSocket client (Node >= 20).
+ * Uses the `ws` client rather than the global WebSocket. The global one only
+ * became reliable in Node 22, and this package declares Node 20 — so a container
+ * built on node:20 crashed with "WebSocket is not defined" the moment a gadget
+ * connected and the session reached for the voice bridge. It passed every local
+ * test, on a machine running 22.
  */
 export class SupabaseEdgeProvider extends EventEmitter {
   /**

@@ -31,7 +31,7 @@ ui.on('error', (e) => report.errors.push('ui ' + e.message));
 await new Promise((r) => ui.once('open', r));
 
 // ---- gadget
-const dev = new WebSocket(`${BASE}/device?dock=${DOCK}`);
+const dev = new WebSocket(`${BASE}/device?dock=${DOCK}&venue=${process.env.VENUE_KEY ?? ''}`);
 dev.binaryType = 'nodebuffer';
 let ready = false;
 let seq = 0;

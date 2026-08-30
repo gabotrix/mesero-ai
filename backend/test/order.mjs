@@ -43,7 +43,7 @@ ui.on('message', (d) => {
 });
 await new Promise((r) => ui.once('open', r));
 
-const dev = new WebSocket(`${BASE}/device?dock=${DOCK}`);
+const dev = new WebSocket(`${BASE}/device?dock=${DOCK}&venue=${process.env.VENUE_KEY ?? ''}`);
 dev.binaryType = 'nodebuffer';
 dev.on('open', () =>
   dev.send(
