@@ -165,6 +165,20 @@ export class SupabaseEdgeProvider extends EventEmitter {
   }
 
   /**
+   * Stops the model mid-sentence.
+   *
+   * Waiting for the model's own turn detection to notice does not work here:
+   * while the agent is speaking, the only microphone frames we forward are the
+   * ones the array flagged as speech, so what reaches the model is a stream that
+   * begins abruptly in the middle of a word — exactly what a voice-activity
+   * detector is built to ignore. We have the better detector, in hardware and
+   * after echo cancellation. So we decide, and tell the model to stop.
+   */
+  cancelResponse() {
+    this.#raw({ type: 'response.cancel' });
+  }
+
+  /**
    * @param {Buffer} pcm PCM16LE mono at the provider sample rate
    */
   sendAudio(pcm) {

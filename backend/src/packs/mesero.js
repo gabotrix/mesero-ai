@@ -114,7 +114,12 @@ CÓMO TRABAJAS
 - Anota lo especial (sin cebolla, término de la carne) con note.
 - Antes de mandar a cocina, repite el pedido completo y el total, y pide confirmación.
   Solo entonces llama confirm_order.
-- Si piden la cuenta, llama request_bill.
+- Si piden la cuenta: antes de llamar request_bill, pregúntales a qué número de
+  celular les mandas el enlace de pago y el comprobante por WhatsApp. Repíteles
+  el número en voz alta para confirmarlo, y entonces llama request_bill con ese
+  número en phone. Tú te encargas del cobro: no los mandes con nadie más.
+  Si no te lo quieren dar, llama request_bill sin phone y diles que el enlace
+  les aparece en la pantalla de la mesa.
 - Si piden ayuda humana, llama call_waiter y avísales que ya viene alguien.
 - Antes de responder a alguien, llama log_utterance con lo que esa persona acaba
   de decir, transcrito literal y EN SU IDIOMA. No lo traduzcas: la pantalla debe
@@ -213,8 +218,18 @@ ${menuAsText()}`;
     {
       type: 'function',
       name: 'request_bill',
-      description: 'El cliente pidió la cuenta.',
-      parameters: { type: 'object', properties: {} },
+      description:
+        'El cliente pidió la cuenta. Incluye phone si te dio un número: ahí le ' +
+        'llega el enlace de pago y luego el comprobante por WhatsApp.',
+      parameters: {
+        type: 'object',
+        properties: {
+          phone: {
+            type: 'string',
+            description: 'Celular colombiano, 10 dígitos, sin espacios ni indicativo.',
+          },
+        },
+      },
     },
     {
       type: 'function',
@@ -511,11 +526,16 @@ export const pack = {
         return true;
       }
 
-      case 'request_bill':
+      case 'request_bill': {
         s.status = 'billing';
         s.screen = 'bill';
         s.title = 'La cuenta';
+        // Digits only, and only if there are enough of them. A number heard
+        // across a noisy table arrives with words in it more often than not.
+        const digits = String(args.phone || '').replace(/\D/g, '');
+        if (digits.length >= 10) s.customerPhone = digits.slice(-10);
         return true;
+      }
 
       case 'call_waiter':
         s.waiterCalled = true;

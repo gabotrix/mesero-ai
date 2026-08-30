@@ -96,6 +96,15 @@ export const config = {
   bargeInLevel: Number(process.env.BARGE_IN_LEVEL || 2500),
 
   /**
+   * Consecutive frames the array must call speech before we cut the agent off.
+   *
+   * Frames are 20 ms, so four is 80 ms — under a tenth of a second, which is
+   * faster than a person notices, and long enough that a cough or a plate does
+   * not stop a sentence.
+   */
+  bargeInFrames: Number(process.env.BARGE_IN_FRAMES || 4),
+
+  /**
    * How long echo is still assumed present after the last frame is handed to the
    * gadget. It covers the device's jitter buffer and I2S DMA — roughly 200 ms of
    * audio that has been sent but not yet heard — plus the tail in the room.
@@ -152,7 +161,7 @@ export const config = {
  * window and the playback cushion — and both looked like hardware problems.
  */
 const REQUIRED_NUMBERS = [
-  'port', 'providerRate', 'bargeInLevel', 'echoGuardMs',
+  'port', 'providerRate', 'bargeInLevel', 'bargeInFrames', 'echoGuardMs',
   'bearingMinSamples', 'bearingWindow', 'primeFrames', 'sessionGraceSeconds',
   'silenceHoldMs', 'wakeVadFrames', 'serveSleepMs',
 ];

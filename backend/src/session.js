@@ -73,6 +73,8 @@ export class Session {
     this.peakWhileListening = 0;
     /** Ignore the room for a moment after the agent stops: echo has a tail. */
     this.echoGuardUntil = 0;
+    /** Consecutive speech frames heard while the agent holds the floor. */
+    this.bargeFrames = 0;
     /**
      * Bearings measured while a customer is actually speaking.
      *
@@ -233,7 +235,11 @@ export class Session {
         return;
       }
       const changed = this.pack.applyTool(this.state, name, args, { seat, doa: this.doa });
-      if (name === 'request_bill') this.requestPayment();
+      if (name === 'request_bill') {
+        // The reducer has already put the number on the table state, so the
+        // link and the WhatsApp that follows both know where to go.
+        this.requestPayment().then(() => this.pushPaymentLink());
+      }
       this.state.seats = this.seats.list();
       this.broadcastUi({ t: 'tool', name, args, seat });
       if (changed) this.broadcastUi({ t: 'state', state: this.state });
@@ -361,10 +367,32 @@ export class Session {
     // it stays quiet through the agent's own speech and fires for a real voice.
     // That flag rides in every frame header; it is a far better answer than any
     // number we could pick here.
+    const speech = Boolean(frame.flags & FLAG_VAD);
     const guarded = this.agentState === 'talking' || Date.now() < this.echoGuardUntil;
-    if (guarded && (!(frame.flags & FLAG_VAD) || level < config.bargeInLevel)) {
+    if (guarded && (!speech || level < config.bargeInLevel)) {
       this.suppressedFrames++;
+      this.bargeFrames = 0;
       return;
+    }
+
+    // Cut the agent off ourselves rather than hoping the model notices.
+    //
+    // A few consecutive frames the array called speech, while the agent holds
+    // the floor, is somebody talking over it — the detector runs after echo
+    // cancellation, so the agent's own voice does not set it. One frame is a
+    // cough or a plate; `bargeInFrames` of them in a row is a person, and by
+    // then only a fraction of a second has passed.
+    if (this.agentState === 'talking' && speech) {
+      this.bargeFrames = (this.bargeFrames || 0) + 1;
+      if (this.bargeFrames >= config.bargeInFrames) {
+        this.bargeFrames = 0;
+        this.log('barge-in (array vad)');
+        this.flushPlayback();
+        this.provider?.cancelResponse?.();
+        this.setAgentState('listening');
+      }
+    } else if (!speech) {
+      this.bargeFrames = 0;
     }
 
     // Sample the bearing only while the array reports speech. Everything else is
@@ -801,6 +829,12 @@ export class Session {
     if (changed) {
       this.state.seats = this.seats.list();
       this.broadcastUi({ t: 'state', state: this.state });
+      // A tool does the same thing whichever side called it. Asking for the bill
+      // from the POS used to change the screen and stop there, so a table could
+      // sit looking at a bill nobody had made payable.
+      if (name === 'request_bill') {
+        this.requestPayment().then(() => this.pushPaymentLink());
+      }
     }
     return changed;
   }
