@@ -244,7 +244,17 @@ body:not(.view-welcome) .suggestions { display: none; }
 
 /* --------------------------------------------------------------- view area */
 
-.view-area { width: min(100%, 620px); margin: 0 auto; padding: 14px 16px 8px; }
+/*
+ * min-width:0 is doing real work here.
+ *
+ * This is a grid item, and a grid item defaults to min-width:auto — it refuses
+ * to shrink below the intrinsic width of its content. The step rail and the
+ * category chips are both wider than a phone, so the item pushed its own track
+ * out to 417px inside a 375px column and the whole page scrolled sideways.
+ * Both of those already scroll inside themselves; they just needed permission
+ * to be narrower than what they hold.
+ */
+.view-area { width: min(100%, 620px); min-width: 0; margin: 0 auto; padding: 14px 16px 8px; }
 .view-head { display: flex; align-items: center; gap: 10px; }
 .back-button {
   flex: 0 0 auto; padding: 8px 13px; border-radius: 12px; cursor: pointer;
