@@ -456,7 +456,7 @@ static void pollDoa() {
 // WiFi, so the table screen has to be reachable from the internet — which means
 // there is no useful local address to default to. Override for a local server.
 #ifndef DEFAULT_BACKEND_HOST
-#define DEFAULT_BACKEND_HOST "mesa.gabotrix.com"
+#define DEFAULT_BACKEND_HOST "restaurant.gabotrix.com"
 #endif
 #ifndef DEFAULT_BACKEND_PORT
 #define DEFAULT_BACKEND_PORT 443
