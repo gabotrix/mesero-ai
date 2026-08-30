@@ -567,8 +567,9 @@ static void handleWireCommand(const String &line) {
      * somebody was standing there trying to pick a network. AP_STA keeps the
      * portal alive for whoever might be using it while the scan runs.
      */
-    if (WiFi.getMode() == WIFI_AP) WiFi.mode(WIFI_AP_STA);
-    else if (WiFi.getMode() == WIFI_OFF) WiFi.mode(WIFI_STA);
+    const wifi_mode_t before = WiFi.getMode();
+    if (before == WIFI_AP) WiFi.mode(WIFI_AP_STA);
+    else if (before == WIFI_OFF) WiFi.mode(WIFI_STA);
     delay(100);
 
     // Synchronous on purpose: this only ever runs while a person is watching a
@@ -585,6 +586,16 @@ static void handleWireCommand(const String &line) {
     }
     wireReply(out);
     WiFi.scanDelete();
+    /*
+     * Put the radio back exactly as it was.
+     *
+     * Leaving AP_STA on was not a tidiness problem: an access point running
+     * alongside the station starves the 20 ms audio loop and, with it, the I2C
+     * reads that carry voice activity and direction. The agent came out chopped
+     * and could not be interrupted, because the flag that says somebody is
+     * talking over it never arrived.
+     */
+    if (WiFi.getMode() != before) WiFi.mode(before);
     return;
   }
 
@@ -885,14 +896,28 @@ static void checkProvisioningReset() {
 }
 
 void loop() {
-  // These three run whether or not there is a network, because they are how a
-  // gadget with no network gets one.
-  wm.process();
+  // These two are cheap and run always: they are how a gadget with no network
+  // gets one, and how one with the wrong config is rescued.
   pollWire();
   checkProvisioningReset();
 
-  startSocketWhenReady();
-  if (!wsStarted) return;
+  /*
+   * The portal belongs to the time before there is a network, and only then.
+   *
+   * wm.process() runs a DNS server and a web server. Calling it on every pass
+   * of a 20 ms audio loop starved both the speaker and the I2C reads that
+   * carry voice activity and direction — the agent came out chopped, and could
+   * not be interrupted at all, because the flag that says somebody is talking
+   * over it never arrived. Once the socket is up, the portal is over.
+   */
+  if (!wsStarted) {
+    wm.process();
+    startSocketWhenReady();
+    if (!wsStarted) return;
+    wm.stopConfigPortal();
+    WiFi.mode(WIFI_STA);
+    Serial.println("[wifi] portal cerrado, radio en modo estacion");
+  }
 
   ws.loop();
   pollDoa();
