@@ -543,6 +543,11 @@ static void handleWireCommand(const String &line) {
     // Never the key itself, only whether there is one. A cable is not a reason
     // to hand a credential back out.
     out["hasVenueKey"] = cfgVenueKey.length() > 0;
+    // The first 17 characters — the same slice the platform stores as a key's
+    // prefix, so the console can say "that is not one of this restaurant's
+    // keys" instead of leaving somebody to discover it from a silent refusal.
+    // Enough to identify a key, not enough to use one.
+    out["keyHint"] = cfgVenueKey.length() ? cfgVenueKey.substring(0, 17) : "";
     // Enough to tell "cannot reach the network" from "the server refused me",
     // which look identical from the console and have opposite fixes.
     out["wifi"] = WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "";
