@@ -114,6 +114,14 @@ const server = createServer(async (req, res) => {
     return json(res, 200, { ok: true, pack: pack.id, sessions: sessions.list().length, voice });
   }
 
+  if (pathname === '/api/devices') {
+    return json(res, 200, {
+      expectsVenueKey: Boolean(config.venueKey),
+      venueKeyHint: config.venueKey ? `${config.venueKey.slice(0, 13)}…` : null,
+      attempts: deviceAttempts,
+    });
+  }
+
   if (pathname === '/api/sessions') {
     return json(res, 200, { sessions: sessions.list().map((s) => s.toJSON()) });
   }
@@ -268,6 +276,33 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
+/**
+ * The last few device connection attempts, so a refusal can be seen.
+ *
+ * A rejected gadget closes its socket and says nothing anyone can reach: the
+ * console shows a table that never wakes and the reason lives only in the
+ * server's stdout, which for a hosted deployment means a dashboard nobody has
+ * open at the table. Diagnosing it was guesswork — "wrong key" and "never
+ * arrived" look identical from outside and have different fixes.
+ *
+ * Kept in memory and capped: this is a breadcrumb for the person setting a
+ * table up, not an audit log.
+ */
+const deviceAttempts = [];
+
+function noteDeviceAttempt(dock, outcome, presented) {
+  deviceAttempts.unshift({
+    dock,
+    outcome,
+    at: new Date().toISOString(),
+    // Never the key itself. The first characters are enough to tell one key
+    // from another when somebody has two and picked the wrong one, and are not
+    // enough to use.
+    keyHint: presented ? `${presented.slice(0, 13)}…` : null,
+  });
+  deviceAttempts.length = Math.min(deviceAttempts.length, 20);
+}
+
 deviceWss.on('connection', (ws, req, url) => {
   const dock = url.searchParams.get('dock') || 'mesa-01';
   /**
@@ -285,10 +320,13 @@ deviceWss.on('connection', (ws, req, url) => {
    */
   const presented = url.searchParams.get('venue');
   if (config.venueKey && presented !== config.venueKey) {
-    console.log(`[${dock}] device refused: ${presented ? 'wrong venue key' : 'no venue key'}`);
+    const why = presented ? 'wrong venue key' : 'no venue key';
+    console.log(`[${dock}] device refused: ${why}`);
+    noteDeviceAttempt(dock, why, presented);
     ws.close(4401, 'venue key required');
     return;
   }
+  noteDeviceAttempt(dock, 'accepted', presented);
 
   const session = sessions.get(dock);
   let attached = false;
