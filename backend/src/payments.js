@@ -18,12 +18,11 @@ function fnUrl(name) {
 async function callFunction(name, body) {
   const res = await fetch(fnUrl(name), {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      apikey: config.supabase.anonKey,
-      authorization: `Bearer ${config.supabase.anonKey}`,
-    },
-    body: JSON.stringify(body),
+    headers: { 'content-type': 'application/json' },
+    // Every one of these functions authenticates the caller by its venue key.
+    // Leaving it out is how a restaurant that could take orders all evening
+    // discovered at the till that it could not charge anybody.
+    body: JSON.stringify({ ...body, venueKey: config.venueKey }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
