@@ -330,7 +330,14 @@ export const pack = {
         })),
       })),
     };
-    writeFileSync(MENU_PATH, JSON.stringify(menu, null, 2) + '\n', 'utf8');
+    // Persisting is a cache, not the point. A read-only filesystem — a
+    // container, a locked-down appliance — must not stop a restaurant from
+    // opening: the carta is already in memory and the agent can serve from it.
+    try {
+      writeFileSync(MENU_PATH, JSON.stringify(menu, null, 2) + '\n', 'utf8');
+    } catch (err) {
+      console.warn(`[pack] no se pudo guardar la carta en disco: ${err.message}`);
+    }
     rebuild();
     return { ok: true, menu };
   },

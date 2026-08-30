@@ -19,11 +19,16 @@ ENV MESERO_ROOT=/app
 ENV PORT=8787
 EXPOSE 8787
 
+# The carta pulled from the platform is cached back to backend/menu.json, so the
+# app has to own what it was given — files copied in are root's otherwise, and
+# the container died on boot unable to write its own cache.
+RUN chown -R node:node /app
+
 # Not root: this process holds no secrets worth having, but it does hold an open
 # socket to the internet.
 USER node
 
 HEALTHCHECK --interval=30s --timeout=4s --start-period=10s \
-  CMD wget -qO- http://127.0.0.1:8787/api/health || exit 1
+  CMD wget -qO- "http://127.0.0.1:${PORT:-8787}/api/health" || exit 1
 
 CMD ["node", "backend/src/index.js"]
