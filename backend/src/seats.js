@@ -49,7 +49,14 @@ export class SeatMap {
    * @param {number|null|undefined} angle degrees 0..359, or nullish if unknown
    * @returns {{id:number, label:string, angle:number}|null}
    */
-  resolve(angle) {
+  /**
+   * @param {number|null|undefined} angle degrees 0..359, or nullish if unknown
+   * @param {number} [strength] how much the samples behind this angle agreed,
+   *   0..1. A hesitant bearing still identifies a seat but is trusted less when
+   *   moving that seat's own position, so one shaky turn cannot drag a
+   *   customer who has been sitting still all evening.
+   */
+  resolve(angle, strength = 1) {
     if (typeof angle !== 'number' || angle < 0 || angle > 359) return null;
 
     let best = null;
@@ -64,8 +71,11 @@ export class SeatMap {
 
     if (best && bestDist <= MERGE_DEGREES) {
       best.samples++;
-      // Later samples nudge the bearing less, so a seat stops wandering.
-      best.angle = blend(best.angle, angle, 1 / Math.min(best.samples, 8));
+      // Later samples nudge less, so a seat settles; a weak bearing nudges
+      // less still.
+      const w = (1 / Math.min(best.samples, 8)) * Math.max(0, Math.min(1, strength));
+      best.angle = blend(best.angle, angle, w);
+      this.consolidate();
       return { id: best.id, label: best.label, angle: best.angle };
     }
 
@@ -78,6 +88,40 @@ export class SeatMap {
     this.nextId++;
     this.seats.push(seat);
     return { id: seat.id, label: seat.label, angle: seat.angle };
+  }
+
+  /**
+   * Folds together seats that have drifted into each other.
+   *
+   * One person can open two seats: their first bearing arrives noisy, lands
+   * thirty degrees off, and a second seat is born a few turns later when the
+   * estimate settles. Nothing used to close that gap, so a table of two showed
+   * three customers for the rest of the evening and their dishes split between
+   * two names.
+   *
+   * Merging keeps the seat with more samples — the one more likely to be where
+   * the person actually is — and the lower id when they are level, so labels
+   * stay stable rather than renumbering under the diner.
+   */
+  consolidate() {
+    let merged = true;
+    while (merged) {
+      merged = false;
+      outer: for (let i = 0; i < this.seats.length; i++) {
+        for (let j = i + 1; j < this.seats.length; j++) {
+          const a = this.seats[i];
+          const b = this.seats[j];
+          if (angleDistance(a.angle, b.angle) > MERGE_DEGREES) continue;
+          const [keep, drop] =
+            b.samples > a.samples || (b.samples === a.samples && b.id < a.id) ? [b, a] : [a, b];
+          keep.angle = blend(keep.angle, drop.angle, drop.samples / (keep.samples + drop.samples));
+          keep.samples += drop.samples;
+          this.seats.splice(this.seats.indexOf(drop), 1);
+          merged = true;
+          break outer;
+        }
+      }
+    }
   }
 
   list() {

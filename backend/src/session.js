@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { config } from './config.js';
 import { createProvider, describeProvider } from './providers/index.js';
 import { Resampler, FrameSplitter, rms } from './audio.js';
-import { SeatMap } from './seats.js';
+import { SeatMap, angleDistance } from './seats.js';
 import { createPaymentLink, checkPayment } from './payments.js';
 import { sendPaymentLink, sendReceipt } from './notify.js';
 import {
@@ -48,6 +48,7 @@ export class Session {
     this.agentState = 'idle';
     this.transcript = [];
     this.doa = DOA_UNKNOWN;
+    this.lastBearingStrength = 0;
     /** Angles heard at this table, clustered into diners. */
     this.seats = new SeatMap();
     this.lastVad = false;
@@ -197,10 +198,16 @@ export class Session {
       // Prefer the bearing frozen when the turn ended: that is the person the
       // model is answering. The live buffer may already belong to whoever
       // started talking next.
-      const live = this.utteranceSamples.length >= config.bearingMinSamples
-        ? circularMean(this.utteranceSamples)
+      // Mid-turn fallback: the model answered before the pause that freezes a
+      // bearing, so estimate from what has arrived so far.
+      const liveEst = this.utteranceSamples.length >= config.bearingMinSamples
+        ? bearingOf(this.utteranceSamples)
         : null;
-      const seat = this.seats.resolve(this.lastBearing ?? live);
+      const live = liveEst && liveEst.strength >= config.bearingMinStrength ? liveEst.angle : null;
+      const seat = this.seats.resolve(
+        this.lastBearing ?? live,
+        this.lastBearing != null ? this.lastBearingStrength : liveEst?.strength,
+      );
       this.log(`bearing live=${live} frozen=${this.lastBearing} samples=${this.utteranceSamples.length} vadFrames=${this.vadFrameCount} seat=${seat?.label ?? 'ninguno'}`);
 
       // The deployed bridge logs transcripts and throws them away, so the model
@@ -409,8 +416,19 @@ export class Session {
       // there were too few samples to trust. Leaving them behind was the bug:
       // the next person's bearings piled onto the previous person's and the
       // average landed between the two, so the table looked like one customer.
-      if (this.utteranceSamples.length >= config.bearingMinSamples) {
-        this.lastBearing = circularMean(this.utteranceSamples);
+      const est = this.utteranceSamples.length >= config.bearingMinSamples
+        ? bearingOf(this.utteranceSamples)
+        : null;
+      if (est && est.strength >= config.bearingMinStrength) {
+        this.lastBearing = est.angle;
+        this.lastBearingStrength = est.strength;
+      } else {
+        // Too few samples, or samples that disagreed. Say so rather than
+        // reusing the previous speaker's bearing: this turn was somebody, and
+        // pinning it on whoever spoke last is the one outcome nobody forgives.
+        this.lastBearing = null;
+        this.lastBearingStrength = 0;
+        if (est) this.log(`bearing descartado R=${est.strength.toFixed(2)} n=${this.utteranceSamples.length}`);
       }
       this.utteranceSamples = [];
     }
@@ -904,16 +922,49 @@ export class Session {
 }
 
 /** Mean of a set of bearings, taken the long way round so 350 and 10 average to 0. */
-function circularMean(degrees) {
+/**
+ * Reduces a burst of arrival angles to one bearing and a measure of agreement.
+ *
+ * Returns `{ angle, strength }`, where strength is the mean resultant length
+ * R in 0..1 — the length of the average unit vector. R near 1 means every
+ * sample pointed the same way; R near 0 means they pointed everywhere and the
+ * average is a direction nobody spoke from.
+ *
+ * That number is the point of this function. A mean always returns something,
+ * so the old code committed to an answer whether the samples agreed or not:
+ * two people talking over each other averaged to the empty space between them
+ * and the dish went to whoever happened to be sitting there. Now the caller
+ * can tell "person on the left" from "no idea", and no idea is a legitimate
+ * answer — an unattributed dish is a smaller failure than one attributed to
+ * the wrong person, who then has to hand it across the table.
+ *
+ * The angle is a circular *median*: the sample whose total angular distance to
+ * the others is smallest. A mean is dragged by a single reflection off a wall
+ * or a stray lock on the speaker; a median ignores a minority of outliers
+ * entirely. O(n²), on at most a few dozen samples.
+ */
+function bearingOf(degrees) {
   if (!degrees.length) return null;
+
   let x = 0;
   let y = 0;
   for (const d of degrees) {
     x += Math.cos((d * Math.PI) / 180);
     y += Math.sin((d * Math.PI) / 180);
   }
-  if (x === 0 && y === 0) return null;
-  return Math.round(((Math.atan2(y, x) * 180) / Math.PI + 360) % 360);
+  const strength = Math.hypot(x, y) / degrees.length;
+
+  let best = degrees[0];
+  let bestCost = Infinity;
+  for (const candidate of degrees) {
+    let cost = 0;
+    for (const other of degrees) cost += angleDistance(candidate, other);
+    if (cost < bestCost) {
+      bestCost = cost;
+      best = candidate;
+    }
+  }
+  return { angle: Math.round(((best % 360) + 360) % 360), strength };
 }
 
 export class SessionManager {

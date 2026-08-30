@@ -6,10 +6,13 @@
   "description": "Session bridge: device audio <-> realtime voice agent <-> table screen",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "test": "node --test \"test/*.test.mjs\""
   },
   "dependencies": {
     "ws": "^8.18.0"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

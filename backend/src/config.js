@@ -142,6 +142,15 @@ export const config = {
    * is noise; ten is a person.
    */
   bearingMinSamples: Number(process.env.BEARING_MIN_SAMPLES || 10),
+  /**
+   * How much the samples in a turn must agree before we name a customer.
+   *
+   * The mean resultant length, 0..1. Below this the turn is left
+   * unattributed rather than guessed. 0.85 is roughly "the samples span
+   * about a quarter-turn or less" — loose enough for somebody who moves
+   * while talking, tight enough to reject two people at once.
+   */
+  bearingMinStrength: Number(process.env.BEARING_MIN_STRENGTH || 0.85),
 
   /**
    * Bearings kept per utterance — 30 frames is 600 ms, about one sentence.
@@ -188,7 +197,7 @@ export const config = {
  */
 const REQUIRED_NUMBERS = [
   'port', 'providerRate', 'bargeInLevel', 'bargeInFrames', 'echoGuardMs',
-  'bearingMinSamples', 'bearingWindow', 'primeFrames', 'sessionGraceSeconds',
+  'bearingMinSamples', 'bearingMinStrength', 'bearingWindow', 'primeFrames', 'sessionGraceSeconds',
   'silenceHoldMs', 'wakeVadFrames', 'serveSleepMs',
 ];
 
