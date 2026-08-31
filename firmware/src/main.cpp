@@ -83,8 +83,10 @@ static const size_t PLAYBACK_MAX_HOLD = DEVICE_FRAME_BYTES * 50;  // 1 s
 
 Preferences prefs;
 
-/** File scope because loop() drives the portal now, not setup(). */
+/** The portal blocks inside setup(); loop() never touches it. */
 WiFiManager wm;
+
+static void startSocket();
 WebSocketsClient ws;
 Xvf3800 xmos;
 
@@ -766,48 +768,44 @@ void setup() {
   });
 
   /*
-   * The portal does not block, and that is the whole point.
+   * The portal blocks again, and that is a retreat I am making on purpose.
    *
-   * autoConnect() used to sit inside setup() running the captive portal for up
-   * to three minutes before loop() ever ran — and pollWire() lives in loop().
-   * So the USB configuration channel was unreachable in exactly the situation
-   * it exists for: a gadget that cannot join a network. It answered only once
-   * it was already online, which is when nobody needs it.
+   * Driving it from loop() so the USB cable could answer with no network was
+   * the right idea and I could not land it safely: the first attempt left an
+   * access point running that starved the audio loop, and the second rebooted
+   * the board every few seconds by changing WiFi mode underneath a TLS
+   * handshake. Two regressions in one evening, on a gadget standing in a
+   * restaurant, chasing a convenience.
    *
-   * No timeout either. The old one rebooted after three minutes, which threw
-   * away a half-finished portal session and any cable conversation with it.
-   * A gadget that is not on a network has nothing better to be doing than
-   * waiting to be told about one.
+   * So it goes back to what ran all day without complaint. The cost is real
+   * and worth naming: the cable only answers once the gadget is on a network,
+   * so a board that cannot join one still needs the captive portal. Landing
+   * the non-blocking version needs hardware to test against, not another
+   * guess.
    */
-  wm.setConfigPortalBlocking(false);
-  wm.setConfigPortalTimeout(0);
-  wm.autoConnect("MeseroAI-setup");
-
-  Serial.println("[wire] listo para configurarse por USB");
-}
-
-/**
- * Opens the socket once, as soon as there is a network and an address to dial.
- *
- * Deferred out of setup() because setup() no longer waits for WiFi. The client
- * reconnects on its own after this, so this runs exactly once.
- */
-// Declared near the wire protocol, which reports it in hello.
-
-static void startSocketWhenReady() {
-  if (wsStarted || WiFi.status() != WL_CONNECTED) return;
-
-  // The portal may have just written these.
-  loadConfig();
-  if (cfgHost.length() == 0) {
-    static bool warned = false;
-    if (!warned) {
-      warned = true;
-      Serial.println("[cfg] conectado pero sin direccion de servidor - usa el portal o el cable");
-    }
-    return;
+  wm.setConfigPortalTimeout(180);
+  if (!wm.autoConnect("MeseroAI-setup")) {
+    Serial.println("[wifi] provisioning timed out - rebooting");
+    ESP.restart();
   }
 
+  loadConfig();
+  if (cfgHost.length() == 0) {
+    Serial.println("[cfg] no backend address set - reopening the setup portal");
+    setLedState("idle");
+    wm.startConfigPortal("MeseroAI-setup");
+    loadConfig();
+    if (cfgHost.length() == 0) {
+      Serial.println("[cfg] still no address - rebooting");
+      ESP.restart();
+    }
+  }
+
+  startSocket();
+}
+
+/** Opens the socket. Called once, from setup, with WiFi already up. */
+static void startSocket() {
   Serial.printf("[wifi] %s  rssi %d\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
   Serial.printf("[ws] %s://%s:%u/device?dock=%s\n", cfgPort == 443 ? "wss" : "ws",
                 cfgHost.c_str(), cfgPort, cfgDock.c_str());
@@ -896,30 +894,11 @@ static void checkProvisioningReset() {
 }
 
 void loop() {
-  // These two are cheap and run always: they are how a gadget with no network
-  // gets one, and how one with the wrong config is rescued.
+  ws.loop();
+  // Reading Serial.available() costs nothing; the portal, which used to be
+  // here too, cost the audio loop everything.
   pollWire();
   checkProvisioningReset();
-
-  /*
-   * The portal belongs to the time before there is a network, and only then.
-   *
-   * wm.process() runs a DNS server and a web server. Calling it on every pass
-   * of a 20 ms audio loop starved both the speaker and the I2C reads that
-   * carry voice activity and direction — the agent came out chopped, and could
-   * not be interrupted at all, because the flag that says somebody is talking
-   * over it never arrived. Once the socket is up, the portal is over.
-   */
-  if (!wsStarted) {
-    wm.process();
-    startSocketWhenReady();
-    if (!wsStarted) return;
-    wm.stopConfigPortal();
-    WiFi.mode(WIFI_STA);
-    Serial.println("[wifi] portal cerrado, radio en modo estacion");
-  }
-
-  ws.loop();
   pollDoa();
   // One frame out for every frame in. Input and output share the I2S clock, so
   // this pacing is what keeps the speaker smooth.
