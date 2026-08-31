@@ -15,7 +15,6 @@ agent-speech.wav
 hardware/case/*.stl
 
 # Local editor and tooling config, not project source
-.claude/
 .vscode/
 
 # Slicer output and backups: regenerated per printer, not source
