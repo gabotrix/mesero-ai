@@ -1,0 +1,18 @@
+# Normalise line endings for source, and keep binaries out of that entirely.
+#
+# Git guesses binary by looking for NUL bytes near the start of a file. A PDF
+# has none, so it is taken for text and its line endings are rewritten on
+# checkout — which silently corrupts it. Measured on a Windows clone: the
+# schematics grew 86 bytes and stopped opening. The same is true of 3MF.
+* text=auto
+
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.mp4   binary
+*.3mf   binary
+*.bin   binary
+
+# Shell scripts and unit files are read by Linux; CRLF breaks the shebang.
+*.sh        text eol=lf
+*.service   text eol=lf
