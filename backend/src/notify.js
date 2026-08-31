@@ -59,7 +59,7 @@ export function normalizePhone(phone) {
  * @param {{phone:string, paymentUrl:string, reference:string, amount:number}} bill
  * @returns {Promise<{sent:boolean, messageId?:string, reason?:string}>}
  */
-export async function sendPaymentLink({ phone, paymentUrl, reference, amount }) {
+export async function sendPaymentLink({ phone, paymentUrl, reference, amount, brand }) {
   if (!ENABLED) return { sent: false, reason: 'WHATSAPP_SEND=0' };
   if (normalizePhone(phone).length < 12) return { sent: false, reason: 'teléfono inválido' };
   if (!paymentUrl) return { sent: false, reason: 'sin enlace de pago' };
@@ -69,6 +69,10 @@ export async function sendPaymentLink({ phone, paymentUrl, reference, amount }) 
     phone,
     paymentUrl,
     reference,
+    // The restaurant's own name, which selects the restaurant template. Without
+    // it the bridge keeps its original behaviour and a diner at a parrilla gets
+    // a message headed with the name of a lottery company.
+    brand,
     details: { amount },
   });
   return { sent: true, messageId: data.messageId };
@@ -80,16 +84,10 @@ export async function sendPaymentLink({ phone, paymentUrl, reference, amount }) 
  * Deliberately a no-op rather than a throw: a table that has already paid must
  * not see an error because a marketing approval is pending somewhere.
  */
-export async function sendReceipt({ phone, transactionId, amount, items }) {
+export async function sendReceipt({ phone, transactionId, amount, items, brand, table }) {
   if (!ENABLED) return { sent: false, reason: 'WHATSAPP_SEND=0' };
-  if (!RESTAURANT_RECEIPT_TEMPLATE) {
-    return {
-      sent: false,
-      reason:
-        'falta una plantilla de comprobante aprobada para el restaurante ' +
-        '(defínela en WHATSAPP_RECEIPT_TEMPLATE)',
-    };
-  }
+  if (normalizePhone(phone).length < 12) return { sent: false, reason: 'teléfono inválido' };
+
   const dishes = (items || [])
     .map((it) => `${it.qty || 1} ${it.label || it.sku}`)
     .join(', ')
@@ -98,9 +96,12 @@ export async function sendReceipt({ phone, transactionId, amount, items }) {
   const data = await callBridge({
     action: 'send_receipt',
     phone,
-    receiptType: RESTAURANT_RECEIPT_TEMPLATE,
+    // One template serves every restaurant: the name is a placeholder, not part
+    // of the approved text. RESTAURANT_RECEIPT_TEMPLATE stays honoured for a
+    // restaurant that got its own approved under its own business account.
+    receiptType: RESTAURANT_RECEIPT_TEMPLATE || 'mesero',
     transactionId,
-    details: { total: amount, items: dishes },
+    details: { total: amount, items: dishes, brand, table },
   });
   return { sent: true, messageId: data.messageId };
 }

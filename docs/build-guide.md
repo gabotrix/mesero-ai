@@ -109,6 +109,29 @@ pio device monitor
 You want lines like `[mic] peak=… doa=… vad=…`. If `peak` stays near zero, the
 board is in USB mode rather than I2S mode — see troubleshooting.
 
+### Check the XVF3800's own firmware version
+
+The first line matters more than it looks:
+
+```
+[xmos] firmware 1.0.5 - read path OK
+```
+
+**It has to be 1.0.5 or newer.** On 1.0.4 the direction-of-arrival register does
+not answer: `readDoa` gets a fixed error, and `doa` stays at 65535 with `vad` at
+0 forever. The gadget still hears, still streams, still takes orders — it simply
+cannot tell one diner from another, and the agent cannot be interrupted, because
+the flag that says somebody is talking over it never arrives.
+
+Two boards from the same order can differ. We lost an evening to it: one gadget
+attributed dishes to five separate customers and its twin, running a
+byte-identical build, reported nothing at all. The version line is the only
+place that difference is visible before you are standing at a table wondering
+why nobody is being recognised.
+
+Seeed's updater flashes the XVF3800 over USB; it is a separate chip from the
+XIAO and reflashing the ESP32 never touches it.
+
 ## Step 5 — Set up your restaurant
 
 Go to the console, create an account and a restaurant, and build your carta:

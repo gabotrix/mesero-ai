@@ -766,6 +766,9 @@ export class Session {
         paymentUrl: pay.url,
         reference: `${this.dock}-${pay.linkId}`,
         amount: pay.amount,
+        // What the diner should see at the top of the message: the name of the
+        // place they are sitting in, not the name of whoever runs the platform.
+        brand: this.pack.menu?.restaurant,
       });
       if (res.sent) this.log(`whatsapp payment link -> ${phone} (${res.messageId})`);
       else {
@@ -794,6 +797,8 @@ export class Session {
         transactionId: pay.transactionId || pay.linkId,
         amount: pay.amount,
         items: this.state.items,
+        brand: this.pack.menu?.restaurant,
+        table: this.state.title || this.dock,
       });
       this.log(res.sent ? `whatsapp receipt -> ${phone}` : `whatsapp receipt skipped: ${res.reason}`);
     } catch (err) {
