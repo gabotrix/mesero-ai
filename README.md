@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/img/hero.png" width="560" alt="The Mesero AI dock: a printed cylinder the size of the board, with a phone leaning into its cradle">
+<img src="docs/img/cover.jpg" alt="Mesero AI — the voice-first waiter that hears, understands and shows, without ever listening. The printed dock holds a phone showing the menu, with the console behind it.">
 
 # Mesero AI
 
