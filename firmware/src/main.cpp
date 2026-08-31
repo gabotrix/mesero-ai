@@ -87,6 +87,7 @@ Preferences prefs;
 WiFiManager wm;
 
 static void startSocket();
+static void checkProvisioningReset();
 WebSocketsClient ws;
 Xvf3800 xmos;
 
@@ -560,6 +561,32 @@ static void handleWireCommand(const String &line) {
     return;
   }
 
+  if (!strcmp(cmd, "probe")) {
+    uint8_t resid = in["resid"] | 20;
+    uint8_t id = in["id"] | 19;
+    uint8_t len = in["len"] | 4;
+    if (len > 16) len = 16;
+    uint8_t buf[20] = {0};
+    uint8_t tx = 0;
+    int rx = 0;
+    const bool ok = xmos.probe(resid, id, len, buf, &tx, &rx);
+
+    char hex[64] = {0};
+    for (uint8_t i = 0; i < len + 1 && i * 3 < sizeof(hex) - 3; i++) {
+      snprintf(hex + i * 3, 4, "%02x ", buf[i]);
+    }
+    StaticJsonDocument<256> out;
+    out["ok"] = true;
+    out["resid"] = resid;
+    out["id"] = id;
+    out["read"] = ok;
+    out["tx"] = tx;
+    out["rx"] = rx;
+    out["bytes"] = hex;
+    wireReply(out);
+    return;
+  }
+
   if (!strcmp(cmd, "scan")) {
     /*
      * Station mode has to be on to see anything.
@@ -835,12 +862,40 @@ void setup() {
   if (told) {
     Serial.printf("[wifi] intentando %s (sin bloquear)\n", WiFi.SSID().c_str());
   } else {
-    Serial.println("[wifi] sin credenciales - abriendo el portal");
-    wm.setConfigPortalTimeout(180);
-    if (!wm.autoConnect("MeseroAI-setup")) {
-      Serial.println("[wifi] provisioning timed out - rebooting");
-      ESP.restart();
+    /*
+     * A board fresh from the flasher has no credentials — and that is exactly
+     * when the cable has to work.
+     *
+     * The previous arrangement sent this case to a blocking portal, the one
+     * branch where pollWire() never runs. Since the web installer erases NVS,
+     * *every* browser install landed there: flash it, then find it unreachable
+     * by the cable you just flashed it with.
+     *
+     * So the portal runs here, non-blocking, inside a wait of our own that
+     * serves the cable too. Both doors open, and neither is in the audio loop —
+     * the audio loop has not started yet. A config arriving over the wire saves
+     * and reboots; the portal, if used, connects and we carry on. The portal is
+     * stopped before anything dials out, because stopping it afterwards is what
+     * rebooted the board earlier tonight.
+     */
+    Serial.println("[wifi] sin credenciales - portal y cable, ambos abiertos");
+    wm.setConfigPortalBlocking(false);
+    wm.setConfigPortalTimeout(0);
+    wm.autoConnect("MeseroAI-setup");
+
+    uint32_t said = 0;
+    while (WiFi.status() != WL_CONNECTED) {
+      wm.process();
+      pollWire();
+      checkProvisioningReset();
+      if (millis() - said > 30000) {
+        said = millis();
+        Serial.println("[wifi] esperando: unete a MeseroAI-setup, o configuralo por USB");
+      }
+      delay(5);
     }
+    wm.stopConfigPortal();
+    Serial.println("[wifi] conectado por el portal");
   }
 
   loadConfig();

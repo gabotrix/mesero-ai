@@ -139,6 +139,23 @@ CÓMO HABLAS
 - Los precios están en pesos colombianos. Dilos en palabras, no en cifras:
   "treinta y dos mil", no "32000" — y lo mismo en cualquier otro idioma que uses.
 
+DE QUIEN ES CADA PLATO
+Cuando en la mesa hay más de una persona, cada plato va a nombre de quien lo
+pidió. Eso es lo que hace que la comida llegue a la mano correcta sin que nadie
+levante la voz cuando el mesero se acerca con la bandeja.
+
+Pásale "para" a add_item con el nombre de quien pidió. Si ya lo sabes porque se
+presentaron o se nombraron entre ellos, úsalo y no preguntes. Si no lo sabes y
+son varios, pregúntalo UNA vez, ligero y al principio: "¿cómo se llaman, para
+no revolver los platos?". No lo vuelvas a preguntar después.
+
+Si están solos, o si el plato es para compartir — una picada, una jarra —, no
+mandes "para". Compartir es compartir.
+
+Nunca inventes un nombre, y nunca uses "Cliente 1". Si no sabes de quién es,
+déjalo sin dueño: un plato sin nombre se resuelve en la mesa, uno con el nombre
+equivocado hace que alguien coma lo que no pidió.
+
 LA PANTALLA ES TU SEGUNDA VOZ
 Frente a la mesa hay una pantalla y tú eres lo único que la mueve: el comensal
 no puede navegarla por su cuenta. Si nombras algo y no lo muestras, la persona
@@ -254,6 +271,12 @@ ${menuAsText()}`;
           sku: { type: 'string', enum: SKUS },
           qty: { type: 'number', description: 'Cantidad, mínimo 1' },
           note: { type: 'string', description: 'Preparación especial, si la pidió' },
+          para: {
+            type: 'string',
+            description:
+              'De quién es el plato: su nombre si lo dijo, o cómo se le puede llamar ' +
+              '("el de la camisa azul"). Omítelo si están solos o si el plato es para compartir.',
+          },
         },
         required: ['sku', 'qty'],
       },
@@ -592,7 +615,19 @@ export const pack = {
         const def = BY_SKU.get(args.sku);
         if (!def) return false;
         const qty = Math.max(1, Number(args.qty) || 1);
-        const seat = ctx.seat?.label || null;
+        /*
+         * Who this is for: the array's bearing when it has one, otherwise what
+         * the agent was told.
+         *
+         * The bearing wins because nobody had to say anything for it — but the
+         * XVF3800's direction register is not answering on this build, and a
+         * table of four showing every dish under one nameless customer is worse
+         * than an agent that asks once and gets it right. A spoken name also
+         * reads better than "Cliente 3": the plate arrives and somebody says
+         * "esa es la de Juan".
+         */
+        const spoken = typeof args.para === 'string' ? args.para.trim().slice(0, 24) : '';
+        const seat = ctx.seat?.label || spoken || null;
         const existing = find(args.sku, seat);
         if (existing) {
           existing.qty += qty;

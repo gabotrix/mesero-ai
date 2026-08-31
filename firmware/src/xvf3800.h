@@ -87,6 +87,21 @@ class Xvf3800 {
     return true;
   }
 
+  /**
+   * Raw read, for finding out what this chip actually answers.
+   *
+   * The direction command returns a constant error and reasoning about XMOS
+   * servicer numbering from the outside has not produced an answer. This makes
+   * the question empirical: sweep resource and command ids from a laptop and
+   * watch which combination returns something that moves when the room does.
+   */
+  bool probe(uint8_t resid, uint8_t cmd, uint8_t len, uint8_t *out, uint8_t *tx, int *rx) {
+    bool ok = readBytes(resid, cmd, out, len);
+    *tx = lastTxResult_;
+    *rx = lastRxCount_;
+    return ok;
+  }
+
   void setLedEffect(uint8_t effect) { writeByte(RESID_GPO, CMD_LED_EFFECT, effect); }
   void setLedBrightness(uint8_t v) { writeByte(RESID_GPO, CMD_LED_BRIGHTNESS, v); }
   void setLedSpeed(uint8_t v) { writeByte(RESID_GPO, CMD_LED_SPEED, v); }
