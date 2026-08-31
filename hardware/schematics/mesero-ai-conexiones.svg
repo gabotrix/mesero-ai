@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" font-family="Helvetica, Arial, sans-serif">
+  <title>Mesero AI — system connection diagram</title>
+  <desc>How the dock, the diner's phone and the backend connect. The phone and the dock never talk to each other.</desc>
+  <rect width="1600" height="100%" fill="#FFFFFF"/>
+  <text x="60" y="62" font-size="34" fill="#1A1411" font-weight="700">Mesero AI — connection diagram</text>
+  <text x="60" y="90" font-size="16.5" fill="#5C534C">Every connection in the build. The gadget hears; the phone only shows.</text>
+  <text x="1540" y="62" font-size="15" fill="#1A1411" font-weight="700" text-anchor="end">GABOTRIX AI®</text>
+  <text x="1540" y="86" font-size="13" fill="#7A6E66" text-anchor="end">reSpeaker XVF3800 + XIAO ESP32S3</text>
+  <line x1="60" y1="112" x2="1540" y2="112" stroke="#D8CEC5" stroke-width="2"/>
+  <rect x="60" y="150" width="600" height="650" rx="14" fill="#FBF9F7" stroke="#1A1411" stroke-width="2.5"/>
+  <text x="86" y="184" font-size="13" fill="#C9331F" font-weight="700" letter-spacing="1.5">ON THE TABLE — THE GADGET</text>
+  <rect x="90" y="196" width="540" height="126" rx="10" fill="#FFFFFF" stroke="#1A1411" stroke-width="2"/>
+  <text x="112" y="227" font-size="19" fill="#1A1411" font-weight="700">reSpeaker XVF3800</text>
+  <text x="112" y="250" font-size="13.5" fill="#5C534C">Seeed 114993700 · XMOS DSP · firmware 1.0.5</text>
+  <text x="112" y="271" font-size="13.5" fill="#5C534C">4 microphones on a 66 mm circle</text>
+  <text x="112" y="292" font-size="13.5" fill="#5C534C">Echo cancellation, beamforming, VAD, direction of arrival</text>
+  <text x="112" y="313" font-size="13.5" fill="#5C534C">Class-D amplifier on board</text>
+  <circle cx="566" cy="233" r="6.5" fill="#C9331F"/>
+  <circle cx="596" cy="256" r="6.5" fill="#C9331F"/>
+  <circle cx="566" cy="279" r="6.5" fill="#C9331F"/>
+  <circle cx="536" cy="256" r="6.5" fill="#C9331F"/>
+  <line x1="200" y1="318" x2="200" y2="392" stroke="#1A1411" stroke-width="2.5"/>
+  <polygon points="200,392 195.413,381.728 204.587,381.728" fill="#1A1411"/>
+  <polygon points="200,318 204.587,328.272 195.413,328.272" fill="#1A1411"/>
+  <rect x="150" y="332" width="104" height="46" rx="6" fill="#FFFFFF" stroke="#1A1411" stroke-width="1.5"/>
+  <text x="202" y="351" font-size="13" fill="#1A1411" font-weight="700" text-anchor="middle">I²S audio</text>
+  <text x="202" y="369" font-size="11" fill="#5C534C" text-anchor="middle">16 kHz · 32 bit</text>
+  <line x1="470" y1="318" x2="470" y2="392" stroke="#1A1411" stroke-width="2.5"/>
+  <polygon points="470,392 465.413,381.728 474.587,381.728" fill="#1A1411"/>
+  <polygon points="470,318 474.587,328.272 465.413,328.272" fill="#1A1411"/>
+  <rect x="420" y="332" width="104" height="46" rx="6" fill="#FFFFFF" stroke="#1A1411" stroke-width="1.5"/>
+  <text x="472" y="351" font-size="13" fill="#1A1411" font-weight="700" text-anchor="middle">I²C control</text>
+  <text x="472" y="369" font-size="11" fill="#5C534C" text-anchor="middle">0x2C · 100 kHz</text>
+  <rect x="90" y="392" width="540" height="104" rx="10" fill="#FFFFFF" stroke="#1A1411" stroke-width="2"/>
+  <text x="112" y="422" font-size="19" fill="#1A1411" font-weight="700">XIAO ESP32S3</text>
+  <text x="112" y="445" font-size="13.5" fill="#5C534C">Seats on the array's 14-pin header — no loose wires</text>
+  <text x="112" y="466" font-size="13.5" fill="#5C534C">Streams 20 ms PCM frames; holds Wi-Fi and the venue key</text>
+  <text x="112" y="487" font-size="13.5" fill="#5C534C">BOOT on GPIO0: 3 s clears Wi-Fi · 10 s clears everything</text>
+  <line x1="360" y1="496" x2="360" y2="556" stroke="#C9331F" stroke-width="2.5"/>
+  <polygon points="360,556 355.413,545.728 364.587,545.728" fill="#C9331F"/>
+  <text x="374" y="530" font-size="13" fill="#C9331F">amplified out</text>
+  <rect x="150" y="556" width="400" height="82" rx="10" fill="#FFFFFF" stroke="#1A1411" stroke-width="2"/>
+  <text x="172" y="585" font-size="18" fill="#1A1411" font-weight="700">Speaker · 8 Ω, 5 W</text>
+  <text x="172" y="607" font-size="13.5" fill="#5C534C">Seeed 114993346 · 50 × 45 × 22 mm</text>
+  <text x="172" y="628" font-size="13.5" fill="#5C534C">Fires down through the floor of the base</text>
+  <line x1="200" y1="700" x2="200" y2="502" stroke="#1A1411" stroke-width="2.5"/>
+  <polygon points="200,502 204.587,512.272 195.413,512.272" fill="#1A1411"/>
+  <rect x="90" y="700" width="230" height="52" rx="10" fill="#FFFFFF" stroke="#1A1411" stroke-width="2"/>
+  <text x="112" y="722" font-size="15" fill="#1A1411" font-weight="700">USB-C — 5 V</text>
+  <text x="112" y="741" font-size="12" fill="#5C534C">power · flashing · provisioning</text>
+  <rect x="360" y="700" width="270" height="52" rx="8" fill="#FFFFFF" stroke="#1A1411" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="382" y="722" font-size="15" fill="#1A1411" font-weight="700">NTAG213 sticker</text>
+  <text x="382" y="741" font-size="12" fill="#5C534C">passive — no power, no wires</text>
+  <rect x="720" y="470" width="290" height="330" rx="14" fill="#FBF9F7" stroke="#1A1411" stroke-width="2.5"/>
+  <text x="746" y="504" font-size="13" fill="#C9331F" font-weight="700" letter-spacing="1.5">THE DINER'S PHONE</text>
+  <rect x="800" y="524" width="130" height="190" rx="16" fill="#FFFFFF" stroke="#1A1411" stroke-width="2"/>
+  <rect x="813" y="544" width="104" height="150" rx="4" fill="#F2EEEA" stroke="#D8CEC5" stroke-width="1"/>
+  <text x="865" y="592" font-size="13" fill="#1A1411" font-weight="700" text-anchor="middle">Menu</text>
+  <text x="865" y="616" font-size="13" fill="#5C534C" text-anchor="middle">Order</text>
+  <text x="865" y="640" font-size="13" fill="#5C534C" text-anchor="middle">Bill</text>
+  <text x="865" y="742" font-size="13" fill="#1A1411" font-weight="700" text-anchor="middle">Display only — never a microphone</text>
+  <text x="865" y="764" font-size="12.5" fill="#5C534C" text-anchor="middle">A web page, not an app</text>
+  <text x="865" y="786" font-size="12.5" fill="#5C534C" text-anchor="middle">Opened by the tag: ?dock=mesa-01</text>
+  <path d="M 630 726 C 672 726, 686 640, 716 620" fill="none" stroke="#1A1411" stroke-width="2" stroke-dasharray="7 5"/>
+  <polygon points="716,620 709.998,629.515 704.908,621.881" fill="#1A1411"/>
+  <text x="636" y="660" font-size="13" fill="#1A1411" font-weight="700">tap</text>
+  <rect x="1070" y="150" width="470" height="400" rx="14" fill="#FBF9F7" stroke="#1A1411" stroke-width="2.5"/>
+  <text x="1096" y="184" font-size="13" fill="#C9331F" font-weight="700" letter-spacing="1.5">YOUR SERVER</text>
+  <rect x="1096" y="202" width="418" height="148" rx="10" fill="#FFFFFF" stroke="#1A1411" stroke-width="2"/>
+  <text x="1118" y="233" font-size="19" fill="#1A1411" font-weight="700">Node backend</text>
+  <text x="1118" y="256" font-size="13.5" fill="#5C534C">Railway, a VPS, or a Seeed reComputer</text>
+  <text x="1118" y="277" font-size="13.5" fill="#5C534C">Speech in · order state · speech out</text>
+  <text x="1118" y="298" font-size="13.5" fill="#5C534C">Seat attribution from the array's bearing</text>
+  <text x="1118" y="319" font-size="13.5" fill="#5C534C">Holds the venue key — the only credential</text>
+  <text x="1118" y="340" font-size="13.5" fill="#5C534C">railway.json health-checks /api/health</text>
+  <rect x="1096" y="368" width="418" height="152" rx="10" fill="#FFFFFF" stroke="#1A1411" stroke-width="2"/>
+  <text x="1118" y="399" font-size="17" fill="#1A1411" font-weight="700">Console — seeed.gabotrix.com</text>
+  <text x="1118" y="423" font-size="13.5" fill="#5C534C">Menu, tables, brand, agent language</text>
+  <text x="1118" y="444" font-size="13.5" fill="#5C534C">Kitchen screen — no second system to log into</text>
+  <text x="1118" y="465" font-size="13.5" fill="#5C534C">Flashes the gadget and puts it on the Wi-Fi,</text>
+  <text x="1118" y="486" font-size="13.5" fill="#5C534C">over USB from the browser (Web Serial)</text>
+  <text x="1118" y="507" font-size="13.5" fill="#5C534C">Stores configuration, never a diner's order</text>
+  <path d="M 660 440 C 830 440, 900 276, 1064 276" fill="none" stroke="#C9331F" stroke-width="3"/>
+  <polygon points="1064,276 1053.73,280.587 1053.73,271.413" fill="#C9331F"/>
+  <polygon points="660,440 670.272,435.413 670.272,444.587" fill="#C9331F"/>
+  <rect x="742" y="356" width="250" height="26" rx="5" fill="#FFF4F2" stroke="none" stroke-width="0"/>
+  <text x="867" y="375" font-size="13" fill="#C9331F" font-weight="700" text-anchor="middle">WebSocket · binary PCM16</text>
+  <path d="M 1010 600 C 1044 600, 1050 540, 1064 500" fill="none" stroke="#1A1411" stroke-width="2.5"/>
+  <polygon points="1064,500 1064.94,511.211 1056.28,508.18" fill="#1A1411"/>
+  <polygon points="1010,600 1020.27,595.413 1020.27,604.587" fill="#1A1411"/>
+  <text x="1096" y="541" font-size="12.5" fill="#5C534C">↕ the phone's own WebSocket — JSON screen state, no audio</text>
+  <rect x="1070" y="592" width="470" height="208" rx="12" fill="#FFF4F2" stroke="#C9331F" stroke-width="2"/>
+  <text x="1096" y="626" font-size="16" fill="#C9331F" font-weight="700">No link between them, by design</text>
+  <text x="1096" y="656" font-size="13.5" fill="#4A423C">The phone and the gadget never talk to each other.</text>
+  <text x="1096" y="679" font-size="13.5" fill="#4A423C">No Bluetooth, no pairing, no local socket.</text>
+  <text x="1096" y="708" font-size="13.5" fill="#4A423C">Each opens its own connection to the backend and</text>
+  <text x="1096" y="731" font-size="13.5" fill="#4A423C">they are matched by the table id in the NFC tag.</text>
+  <text x="1096" y="760" font-size="13.5" fill="#4A423C">That is why the phone never needs the microphone,</text>
+  <text x="1096" y="783" font-size="13.5" fill="#4A423C">and why a locked screen does not stop the order.</text>
+  <line x1="60" y1="848" x2="1540" y2="848" stroke="#D8CEC5" stroke-width="2"/>
+  <text x="60" y="880" font-size="14" fill="#5C534C">The only soldered joint in the build is the speaker's, and it arrives already made. Everything else plugs together.</text>
+  <text x="60" y="906" font-size="14" fill="#5C534C">Audio path: 4 microphones → XVF3800 (echo cancellation, beamforming) → I²S → ESP32-S3 → Wi-Fi → backend → back down the same socket → amplifier → speaker.</text>
+  <text x="60" y="938" font-size="13" fill="#7A6E66">Apache-2.0 · github.com/gabotrix/mesero-ai · Seeed Interactive Signage Contest 2026</text>
+</svg>
