@@ -789,6 +789,33 @@ void setup() {
     ESP.restart();
   }
 
+  /*
+   * Keep the radio awake.
+   *
+   * Arduino leaves modem sleep on, so the ESP32 dozes between beacons and
+   * wakes to check for traffic. That is right for a sensor that reports once a
+   * minute and wrong for this: it streams a 20 ms audio frame each way,
+   * continuously, and a radio that naps adds latency spikes, drops frames, and
+   * with a phone hotspot — which runs its own aggressive power saving on the
+   * other side — produces exactly the connect-and-drop cycle it looked like.
+   *
+   * It costs current. A gadget on a table is plugged in.
+   */
+  WiFi.setSleep(false);
+  WiFi.setAutoReconnect(true);
+
+  // Disconnect reasons are the difference between "wrong password", "out of
+  // range" and "the access point sent us away", which look identical from here
+  // and have nothing in common as fixes.
+  WiFi.onEvent(
+      [](WiFiEvent_t, WiFiEventInfo_t info) {
+        Serial.printf("[wifi] desconectado, motivo %u\n", info.wifi_sta_disconnected.reason);
+      },
+      ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+  WiFi.onEvent(
+      [](WiFiEvent_t, WiFiEventInfo_t) { Serial.println("[wifi] reconectado"); },
+      ARDUINO_EVENT_WIFI_STA_GOT_IP);
+
   loadConfig();
   if (cfgHost.length() == 0) {
     Serial.println("[cfg] no backend address set - reopening the setup portal");
@@ -893,8 +920,39 @@ static void checkProvisioningReset() {
   }
 }
 
+/**
+ * Nudges a dropped network back, and only reboots as a last resort.
+ *
+ * setAutoReconnect handles the ordinary case. This is for the one where the
+ * stack believes it is connected and is not — rare, and indistinguishable from
+ * a dead table until somebody walks over. The thresholds are deliberately long:
+ * a reboot loop is worse than a slow recovery, and this evening proved it.
+ */
+static void watchWifi() {
+  static uint32_t downSince = 0;
+  static uint32_t lastNudge = 0;
+  const uint32_t now = millis();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    downSince = 0;
+    return;
+  }
+  if (downSince == 0) downSince = now;
+
+  if (now - lastNudge > 10000) {
+    lastNudge = now;
+    Serial.println("[wifi] sin red - reintentando");
+    WiFi.reconnect();
+  }
+  if (now - downSince > 180000) {
+    Serial.println("[wifi] tres minutos sin red - reiniciando");
+    ESP.restart();
+  }
+}
+
 void loop() {
   ws.loop();
+  watchWifi();
   // Reading Serial.available() costs nothing; the portal, which used to be
   // here too, cost the audio loop everything.
   pollWire();
