@@ -783,12 +783,6 @@ void setup() {
    * the non-blocking version needs hardware to test against, not another
    * guess.
    */
-  wm.setConfigPortalTimeout(180);
-  if (!wm.autoConnect("MeseroAI-setup")) {
-    Serial.println("[wifi] provisioning timed out - rebooting");
-    ESP.restart();
-  }
-
   /*
    * Keep the radio awake.
    *
@@ -816,23 +810,60 @@ void setup() {
       [](WiFiEvent_t, WiFiEventInfo_t) { Serial.println("[wifi] reconectado"); },
       ARDUINO_EVENT_WIFI_STA_GOT_IP);
 
-  loadConfig();
-  if (cfgHost.length() == 0) {
-    Serial.println("[cfg] no backend address set - reopening the setup portal");
-    setLedState("idle");
-    wm.startConfigPortal("MeseroAI-setup");
-    loadConfig();
-    if (cfgHost.length() == 0) {
-      Serial.println("[cfg] still no address - rebooting");
+  /*
+   * A gadget that has been told about a network never enters the portal.
+   *
+   * This is the third arrangement of this code tonight, and the first that
+   * serves the case that actually happens. autoConnect() blocks inside setup()
+   * while it runs the portal, and pollWire() lives in loop() — so a gadget that
+   * could not reach its network could not be reached by the cable either. That
+   * is a deadlock precisely when somebody is standing there trying to fix the
+   * network.
+   *
+   * So: stored credentials mean WiFi.begin() and straight on to loop(), where
+   * the cable answers within a second whether or not the network ever comes up.
+   * The blocking portal is kept for a board that has never been told anything,
+   * which is the one case where there is nothing else to do.
+   *
+   * Notably this needs no wm.process() in the audio loop and no WiFi mode
+   * changes at runtime — the two things that broke it the other two times.
+   */
+  WiFi.begin();
+  delay(100);
+  const bool told = WiFi.SSID().length() > 0;
+
+  if (told) {
+    Serial.printf("[wifi] intentando %s (sin bloquear)\n", WiFi.SSID().c_str());
+  } else {
+    Serial.println("[wifi] sin credenciales - abriendo el portal");
+    wm.setConfigPortalTimeout(180);
+    if (!wm.autoConnect("MeseroAI-setup")) {
+      Serial.println("[wifi] provisioning timed out - rebooting");
       ESP.restart();
     }
   }
 
-  startSocket();
+  loadConfig();
 }
 
-/** Opens the socket. Called once, from setup, with WiFi already up. */
+/**
+ * Opens the socket once there is a network and an address to dial.
+ *
+ * Called from loop rather than setup, because setup no longer waits for WiFi.
+ * The client reconnects on its own afterwards, so this runs exactly once.
+ */
 static void startSocket() {
+  if (wsStarted || WiFi.status() != WL_CONNECTED) return;
+  loadConfig();
+  if (cfgHost.length() == 0) {
+    static bool warned = false;
+    if (!warned) {
+      warned = true;
+      Serial.println("[cfg] en red pero sin direccion de servidor - usa el cable o el portal");
+    }
+    return;
+  }
+
   Serial.printf("[wifi] %s  rssi %d\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
   Serial.printf("[ws] %s://%s:%u/device?dock=%s\n", cfgPort == 443 ? "wss" : "ws",
                 cfgHost.c_str(), cfgPort, cfgDock.c_str());
@@ -951,12 +982,20 @@ static void watchWifi() {
 }
 
 void loop() {
-  ws.loop();
-  watchWifi();
-  // Reading Serial.available() costs nothing; the portal, which used to be
-  // here too, cost the audio loop everything.
+  // The cable answers from the first second, network or no network. Reading
+  // Serial.available() costs nothing; the captive portal, which briefly lived
+  // here, cost the audio loop everything.
   pollWire();
   checkProvisioningReset();
+
+  startSocket();
+  if (!wsStarted) {
+    watchWifi();
+    return;
+  }
+
+  ws.loop();
+  watchWifi();
   pollDoa();
   // One frame out for every frame in. Input and output share the I2S clock, so
   // this pacing is what keeps the speaker smooth.

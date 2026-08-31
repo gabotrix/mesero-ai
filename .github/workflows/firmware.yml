@@ -41,8 +41,12 @@ jobs:
             ~/.cache/pip
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
 
-      - name: Install PlatformIO
-        run: pip install --upgrade platformio
+      # esptool explicitly: PlatformIO keeps its own copy inside a private
+      # virtualenv, so `python -m esptool` in the merge step below finds nothing
+      # on the runner's interpreter. It failed exactly that way the first time
+      # this ran, which is what CI is for.
+      - name: Install PlatformIO and esptool
+        run: pip install --upgrade platformio esptool
 
       - name: Build
         working-directory: firmware
