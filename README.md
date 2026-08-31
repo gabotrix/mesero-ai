@@ -141,7 +141,7 @@ Print `calib.stl` first — it verifies the mount circle and the connector cutou
 before you commit four hours to the lid. PETG, 0.2 mm, 4 walls, 25% infill.
 
 <div align="center">
-<img src="docs/img/case-exploded.png" width="420" alt="Base, lid and phone cradle">
+<img src="docs/img/hero.png" width="520" alt="The printed dock: a cylinder the size of the board, with a phone leaning into its cradle">
 </div>
 
 **2 · Flash the firmware.**
